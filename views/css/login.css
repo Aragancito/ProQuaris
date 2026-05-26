@@ -1,0 +1,91 @@
+.contenedor-login {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: var(--color-fondo);
+    padding: 20px;
+}
+
+.tarjeta-login {
+    background-color: var(--color-tarjeta);
+    padding: 40px;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 450px;
+    border: 1px solid var(--color-borde);
+    text-align: center;
+}
+
+.logo-formulario {
+    font-size: 26px;
+    font-weight: bold;
+    color: white;
+    margin-bottom: 20px;
+}
+
+.tarjeta-login h2 {
+    font-size: 24px;
+    font-weight: 400;
+    margin-bottom: 8px;
+}
+
+.subtitulo {
+    color: var(--color-texto-mutado);
+    font-size: 14px;
+    margin-bottom: 30px;
+}
+
+.grupo-input {
+    margin-bottom: 16px;
+    text-align: left;
+}
+
+.grupo-input input {
+    width: 100%;
+    padding: 14px;
+    background-color: var(--color-fondo);
+    border: 1px solid var(--color-borde);
+    border-radius: 4px;
+    font-size: 15px;
+    color: white;
+    transition: border-color 0.2s;
+}
+
+.grupo-input input:focus {
+    outline: none;
+    border-color: var(--color-principal);
+}
+
+.btn-login {
+    width: 100%;
+    padding: 12px;
+    background-color: var(--color-principal);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.2s;
+}
+
+.btn-login:hover {
+    background-color: #4f46e5;
+}
+
+.acciones-secundarias {
+    margin-top: 25px;
+    text-align: left;
+}
+
+.link-recuperar {
+    font-size: 14px;
+    color: var(--color-principal);
+    font-weight: 500;
+}
+
+.link-recuperar:hover {
+    text-decoration: underline;
+}

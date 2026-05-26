@@ -1,0 +1,29 @@
+:root {
+    --color-principal: #6366F1;       /* Morado/Azul de los botones e indicadores */
+    --color-fondo: #0F1115;           /* Fondo general oscuro oscuro */
+    --color-tarjeta: #16181D;         /* Fondo de las tarjetas y el login */
+    --color-texto: #FFFFFF;           /* Texto principal en blanco */
+    --color-texto-mutado: #9CA3AF;    /* Gris claro para subtítulos */
+    --color-borde: #242731;           /* Líneas sutiles de separación */
+    --color-alerta: #EF4444;          
+    --color-exito: #10B981;           
+    --fuente-principal: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--fuente-principal);
+    background-color: var(--color-fondo);
+    color: var(--color-texto);
+    line-height: 1.6;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
