@@ -1,90 +1,138 @@
+<?php
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
+if (!isset($_SESSION['usuario_nombre'])) {
+    header("Location: login.php");
+    exit();
+}
+
+$nombreUsuario = $_SESSION['usuario_nombre'] ?? 'Usuario';
+$rolUsuario = $_SESSION['usuario_rol'] ?? 'Empleado';
+?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Principal - ProQuaris</title>
-    <link rel="stylesheet" href="../css/estilos-globales.css">
-    <link rel="stylesheet" href="../css/dashboard.css">
+    <title>Dashboard - ProQuaris</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/dashboard.css">
 </head>
 <body>
+<div class="dashboard-container">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">ProQuaris</div>
+        </div>
+        <div class="user-info">
+            <div class="user-name"><?php echo htmlspecialchars($nombreUsuario); ?></div>
+            <div class="user-role"><?php echo htmlspecialchars($rolUsuario); ?></div>
+        </div>
+        <nav class="nav-menu">
+            <a href="#" class="nav-item active">
+                <span class="nav-icon">📊</span>
+                <span>Inicio (Resumen)</span>
+            </a>
+            <a href="#" class="nav-item">
+                <span class="nav-icon">📋</span>
+                <span>Órdenes de Producción</span>
+            </a>
+            <a href="#" class="nav-item">
+                <span class="nav-icon">🏷️</span>
+                <span>Lotes y Calidad</span>
+            </a>
+            <a href="#" class="nav-item">
+                <span class="nav-icon">📦</span>
+                <span>Inventario Materia Prima</span>
+            </a>
+            <a href="#" class="nav-item">
+                <span class="nav-icon">👥</span>
+                <span>Usuarios y Roles</span>
+            </a>
+        </nav>
+        <div style="padding: 20px;">
+            <a href="../controllers/UsuarioController.php?logout=true" class="nav-item" style="color: #FF5252;">
+                <span class="nav-icon">🚪</span>
+                <span>Cerrar Sesión</span>
+            </a>
+        </div>
+    </aside>
 
-    <div class="estructura-dashboard">
-        
-        <aside class="sidebar">
-            <div class="logo-dashboard">ProQuaris</div>
-            <div class="usuario-info">
-                <p class="nombre-usuario">Juan Tamayo</p>
-                <span class="rol-usuario">Administrador</span>
-            </div>
-            
-            <nav class="menu-lateral">
-                <a href="#" class="item-menu activo">Inicio (Resumen)</a>
-                <a href="#" class="item-menu">Órdenes de Producción</a>
-                <a href="#" class="item-menu">Lotes y Calidad</a>
-                <a href="#" class="item-menu">Inventario Materia Prima</a>
-                <a href="#" class="item-menu">Usuarios y Roles</a>
-            </nav>
-
-            <div class="sidebar-footer">
-                <a href="login.php" class="btn-cerrar-sesion">Cerrar Sesión</a>
-            </div>
-        </aside>
-
-        <main class="contenido-principal">
-            
-            <header class="topbar">
+    <main class="main-content">
+        <div class="top-bar">
+            <div class="page-title">
                 <h1>Panel de Control Principal</h1>
-                <div class="fecha-actual">Mayo, 2026</div>
-            </header>
+                <p><?php echo date('F, Y'); ?></p>
+            </div>
+        </div>
 
-            <section class="tarjetas-resumen">
-                <div class="tarjeta">
-                    <h3>Órdenes Activas</h3>
-                    <p class="numero">12</p>
-                </div>
-                <div class="tarjeta">
-                    <h3>Lotes Producidos hoy</h3>
-                    <p class="numero">45</p>
-                </div>
-                <div class="tarjeta alerta">
-                    <h3>Alertas de Calidad</h3>
-                    <p class="numero">3</p>
-                </div>
-            </section>
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-title">Órdenes Activas</div>
+                <div class="kpi-value">12</div>
+                <div class="kpi-trend trend-up">↑ +3 vs mes anterior</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Lotes Producidos hoy</div>
+                <div class="kpi-value">45</div>
+                <div class="kpi-trend trend-up">↑ +8% vs ayer</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Alertas de Calidad</div>
+                <div class="kpi-value">3</div>
+                <div class="kpi-trend trend-down">↓ -2 vs semana pasada</div>
+            </div>
+        </div>
 
-            <section class="seccion-datos">
-                <h2>Últimos Lotes Verificados</h2>
-                <div class="tabla-contenedor">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Código Lote</th>
-                                <th>Fecha</th>
-                                <th>Cantidad</th>
-                                <th>Estado</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>LOT-2026-001</td>
-                                <td>21/05/2026</td>
-                                <td>500 uds</td>
-                                <td><span class="tag aprobado">Aprobado</span></td>
-                            </tr>
-                            <tr>
-                                <td>LOT-2026-002</td>
-                                <td>21/05/2026</td>
-                                <td>350 uds</td>
-                                <td><span class="tag rechazado">Rechazado</span></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-        </main>
-    </div>
-
+        <div class="table-container">
+            <div class="table-header">
+                <h3>Últimos Lotes Verificados</h3>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Código Lote</th>
+                        <th>Fecha</th>
+                        <th>Cantidad</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>LOT-2026-001</td>
+                        <td>21/05/2026</td>
+                        <td>500 uds</td>
+                        <td><span class="badge badge-success">Aprobado</span></td>
+                    </tr>
+                    <tr>
+                        <td>LOT-2026-002</td>
+                        <td>21/05/2026</td>
+                        <td>350 uds</td>
+                        <td><span class="badge badge-danger">Rechazado</span></td>
+                    </tr>
+                    <tr>
+                        <td>LOT-2026-003</td>
+                        <td>20/05/2026</td>
+                        <td>280 uds</td>
+                        <td><span class="badge badge-success">Aprobado</span></td>
+                    </tr>
+                    <tr>
+                        <td>LOT-2026-004</td>
+                        <td>20/05/2026</td>
+                        <td>420 uds</td>
+                        <td><span class="badge badge-warning">En revisión</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
 </body>
+
+    <script src="https://cdn.botpress.cloud/webchat/v3.6/inject.js"></script>
+<script src="https://files.bpcontent.cloud/2026/06/17/03/20260617035538-JZYJE355.js" defer></script>
+    
 </html>

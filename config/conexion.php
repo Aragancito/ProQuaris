@@ -7,14 +7,11 @@ class Conexion {
         try {
             $db = new PDO("mysql:host=$host", $user, $pass);
             $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            
-            // Crea la base de datos si no existe y la selecciona
-            $db->exec("CREATE DATABASE IF NOT EXISTS proquaris");
-            $db->exec("USE proquaris");
-            
+            $db->exec("CREATE DATABASE IF NOT EXISTS proquaris_bd");
+            $db->exec("USE proquaris_bd");
             return $db;
         } catch (PDOException $e) {
-            die("Error de conexión a MySQL: " . $e->getMessage());
+            die("Error de conexión: " . $e->getMessage());
         }
     }
 }
