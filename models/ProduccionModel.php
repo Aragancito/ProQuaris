@@ -5,33 +5,49 @@
 require_once "../config/conexion.php";
 
 // ==========================================
-// MODELO DE PRODUCCIÓN
+// MODELO DE PRODUCCIÓN (CAPA DE DATOS)
 // ==========================================
+// ABSTRACCIÓN: Esta clase abstrae todas las operaciones de base de datos
+// relacionadas con lotes de producción. El controlador solo llama
+// a registrarLote() sin conocer los detalles SQL.
 class ProduccionModel {
+    
+    // ==========================================
+    // ENCAPSULAMIENTO
+    // ==========================================
+    // El atributo $db es privado, protegiendo la conexión a la base de datos.
     private $db;
 
+    // ==========================================
+    // CONSTRUCTOR
+    // ==========================================
+    // ABSTRACCIÓN: La conexión se obtiene mediante un método estático
+    // que oculta la configuración PDO.
     public function __construct() {
-        // Obtiene la conexión activa a la base de datos
         $this->db = Conexion::conectar();
     }
 
     // ==========================================
     // REGISTRO DE LOTE DE PRODUCCIÓN
     // ==========================================
+    // ABSTRACCIÓN: Este método oculta toda la lógica de inserción SQL.
+    // El controlador solo pasa los datos y recibe un booleano.
     public function registrarLote($datos) {
         try {
-            // Consulta preparada con marcadores nombrados (:param) para prevenir inyección SQL
-            // Los nombres de los marcadores coinciden con las claves del array $datos
+            // POLIMORFISMO: Los marcadores nombrados (:param) permiten que
+            // la consulta se adapte a diferentes estructuras de datos.
             $query = "INSERT INTO Produccion (id_lote, producto, cantidad, estado) 
                       VALUES (:id, :producto, :cantidad, :estado)";
             $stmt = $this->db->prepare($query);
             
-            // Se pasa el array directamente porque los nombres de las claves coinciden 
-            // con los marcadores de la consulta (ej. :id → $datos['id'])
+            // POLIMORFISMO: execute() recibe un array asociativo y se adapta
+            // a los marcadores de la consulta sin necesidad de bindParam().
+            // Los nombres de las claves deben coincidir con los marcadores.
             $stmt->execute($datos);
             return true;
         } catch (PDOException $e) {
-            // Detiene la ejecución mostrando el error para depuración
+            // ABSTRACCIÓN: El error se muestra pero los detalles internos
+            // de la base de datos están ocultos en el mensaje.
             die("Error en ProduccionModel: " . $e->getMessage());
         }
     }

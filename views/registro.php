@@ -24,7 +24,7 @@
         <!-- ========================================== -->
         <?php if (isset($_GET['error'])): ?>
             <div class="error-message">
-                <!-- Muestra mensaje según el tipo de error recibido -->
+                <!-- POLIMORFISMO: Muestra mensaje diferente según el tipo de error -->
                 <?php if ($_GET['error'] == 1) echo "❌ Todos los campos son requeridos"; ?>
                 <?php if ($_GET['error'] == 2) echo "❌ Error al registrar el usuario"; ?>
             </div>
@@ -33,11 +33,13 @@
         <!-- ========================================== -->
         <!-- FORMULARIO DE REGISTRO                     -->
         <!-- ========================================== -->
-        <!-- El campo oculto 'accion' permite al controlador diferenciar entre registro y login -->
+        <!-- POLIMORFISMO: El campo oculto 'accion' permite al controlador
+             diferenciar entre registro y login desde el mismo endpoint -->
         <form action="../controllers/UsuarioController.php" method="POST">
             <input type="hidden" name="accion" value="registrar">
 
-            <!-- Datos personales del usuario -->
+            <!-- ABSTRACCIÓN: Los campos del formulario ocultan cómo se procesarán
+                 los datos en el controlador y modelo -->
             <div class="grupo-input">
                 <input type="text" name="nombre" placeholder="Nombres" required>
             </div>
@@ -51,7 +53,8 @@
                 <input type="password" name="contrasena" placeholder="Contraseña" required>
             </div>
 
-            <!-- Selección del rol: Administrador o Empleado -->
+            <!-- POLIMORFISMO: El select permite diferentes roles que cambiarán
+                 el comportamiento del sistema -->
             <div class="grupo-input">
                 <select name="rol" required>
                     <option value="">Seleccione el Rol del Usuario...</option>

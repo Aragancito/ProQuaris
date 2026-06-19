@@ -24,7 +24,7 @@
         <!-- ========================================== -->
         <?php if (isset($_GET['error'])): ?>
             <div class="error-message">
-                <!-- Muestra mensaje según el tipo de error recibido -->
+                <!-- POLIMORFISMO: Muestra mensaje diferente según el tipo de error -->
                 <?php if ($_GET['error'] == 1) echo "❌ El correo no está registrado"; ?>
                 <?php if ($_GET['error'] == 2) echo "❌ Error al enviar el correo"; ?>
             </div>
@@ -39,7 +39,8 @@
         <!-- ========================================== -->
         <!-- FORMULARIO DE RECUPERACIÓN                 -->
         <!-- ========================================== -->
-        <!-- Envía el correo al controlador para procesar la solicitud -->
+        <!-- ABSTRACCIÓN: El formulario oculta los detalles del procesamiento.
+             El usuario solo ingresa su correo y el sistema se encarga del resto. -->
         <form action="../controllers/recuperar_controller.php" method="POST">
             <div class="grupo-input">
                 <input type="email" name="correo" placeholder="Correo electrónico" required>

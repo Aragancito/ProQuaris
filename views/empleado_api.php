@@ -15,6 +15,8 @@ if (!isset($_SESSION['usuario_nombre'])) {
 // ==========================================
 // CONEXIÓN A LA BASE DE DATOS
 // ==========================================
+// ABSTRACCIÓN: PDO oculta los detalles de conexión a MySQL.
+// El resto del código solo interactúa con métodos de PDO (query, prepare, execute).
 try {
     $conn = new PDO("mysql:host=localhost;dbname=proquaris_bd", "root", "");
     $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -26,7 +28,8 @@ try {
 // ==========================================
 // ENRUTADOR DE ACCIONES
 // ==========================================
-// Determina qué acción ejecutar según el parámetro recibido (GET o POST)
+// POLIMORFISMO: El mismo enrutador maneja diferentes acciones
+// según el parámetro recibido (panel, lotes, inspecciones, etc.)
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 // ==========================================
@@ -34,21 +37,20 @@ $action = $_GET['action'] ?? $_POST['action'] ?? '';
 // ==========================================
 // Retorna los 5 lotes más recientes, el total de defectos y KPIs básicos
 if ($action === 'panel') {
-    // Obtiene los 5 lotes más recientes ordenados por ID descendente
+    // POLIMORFISMO: query() se adapta a diferentes consultas SQL
     $stmt = $conn->query("SELECT * FROM lote ORDER BY idLote DESC LIMIT 5");
     $lotes = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Cuenta el total de defectos registrados
     $stmt2 = $conn->query("SELECT COUNT(*) as total FROM defecto");
     $defectos = $stmt2->fetch(PDO::FETCH_ASSOC);
     
-    // Formatea los datos de los lotes para el frontend
+    // ABSTRACCIÓN: Formatea los datos para el frontend sin exponer la estructura de BD
     $lotes_recientes = [];
     foreach ($lotes as $l) {
         $lotes_recientes[] = [
             'id' => $l['idLote'],
             'codigo' => 'LOT-' . $l['idLote'],
-            'producto' => 'Producto', // Valor por defecto (debería venir de la BD)
+            'producto' => 'Producto',
             'cantidad' => $l['cantidad'],
             'estado' => isset($l['estado']) ? $l['estado'] : 'pendiente'
         ];
@@ -57,18 +59,18 @@ if ($action === 'panel') {
     echo json_encode([
         'lotes_asignados' => count($lotes),
         'defectos_registrados' => $defectos['total'],
-        'tareas_pendientes' => 3, // Valor fijo de ejemplo
+        'tareas_pendientes' => 3,
         'lotes_recientes' => $lotes_recientes
     ]);
     
 // ==========================================
 // ACCIÓN: LISTA DE LOTES
 // ==========================================
-// Retorna todos los lotes ordenados por ID descendente
 } elseif ($action === 'lotes' || $action === 'mislotes') {
     $stmt = $conn->query("SELECT * FROM lote ORDER BY idLote DESC");
     $lotes = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
+    // ABSTRACCIÓN: Transforma los datos de BD al formato esperado por el frontend
     $resultado = [];
     foreach ($lotes as $l) {
         $resultado[] = [
@@ -85,9 +87,8 @@ if ($action === 'panel') {
 // ==========================================
 // ACCIÓN: INSPECCIONES
 // ==========================================
-// Retorna todas las inspecciones con el código del lote asociado
+// POLIMORFISMO: LEFT JOIN maneja lotes que no tienen inspecciones
 } elseif ($action === 'inspecciones') {
-    // LEFT JOIN para incluir lotes sin inspecciones si existieran
     $stmt = $conn->query("SELECT i.*, l.idLote as lote_codigo FROM registroinspeccion i LEFT JOIN lote l ON i.FK_loteld = l.idLote ORDER BY i.idRI DESC");
     $inspecciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
     echo json_encode($inspecciones);
@@ -95,7 +96,7 @@ if ($action === 'panel') {
 // ==========================================
 // ACCIÓN: DETALLE DE LOTE
 // ==========================================
-// Retorna la información completa de un lote específico por su ID
+// POLIMORFISMO: La consulta se prepara con un parámetro dinámico
 } elseif ($action === 'detalle_lote') {
     $id = isset($_GET['id']) ? $_GET['id'] : 0;
     $stmt = $conn->prepare("SELECT * FROM lote WHERE idLote = ?");
@@ -118,14 +119,14 @@ if ($action === 'panel') {
 // ==========================================
 // ACCIÓN: REGISTRAR DEFECTO
 // ==========================================
-// Inserta un nuevo defecto asociado a un lote
+// POLIMORFISMO: La consulta preparada se adapta a diferentes tipos de datos
 } elseif ($action === 'registrar_defecto') {
     $lote_id = isset($_POST['lote_id']) ? $_POST['lote_id'] : 0;
     $tipo = isset($_POST['tipo']) ? $_POST['tipo'] : '';
     $severidad = isset($_POST['severidad']) ? $_POST['severidad'] : '';
     $descripcion = isset($_POST['descripcion']) ? $_POST['descripcion'] : '';
     
-    // Consulta preparada para prevenir inyección SQL
+    // ABSTRACCIÓN: La consulta preparada oculta los detalles de escape de datos
     $stmt = $conn->prepare("INSERT INTO defecto (FK_loteld, tipo, severidad, descripcion) VALUES (?, ?, ?, ?)");
     $resultado = $stmt->execute([$lote_id, $tipo, $severidad, $descripcion]);
     

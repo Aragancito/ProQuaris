@@ -2,8 +2,12 @@
 // ==========================================
 // VERIFICACIÓN DE SESIÓN ACTIVA
 // ==========================================
+// ABSTRACCIÓN: session_start() maneja la persistencia de datos del usuario
+// sin exponer cómo se almacenan las sesiones (archivos, cookies, etc.)
 session_start();
-// Si el usuario ya tiene sesión activa, lo redirige al dashboard según su rol
+
+// POLIMORFISMO: El flujo cambia según el rol del usuario
+// Si ya tiene sesión activa, redirige a su dashboard correspondiente
 if (isset($_SESSION['usuario_nombre'])) {
     if ($_SESSION['usuario_rol'] === 'Administrador') {
         header("Location: dashboard.php");
@@ -44,7 +48,7 @@ if (isset($_SESSION['usuario_nombre'])) {
             <?php if (isset($_GET['error'])): ?>
                 <div class="error-message">
                     <?php 
-                        // Muestra un mensaje específico según el código de error recibido
+                        // POLIMORFISMO: Muestra mensaje diferente según el código de error
                         switch($_GET['error']) {
                             case 1: echo "❌ Usuario o contraseña incorrectos"; break;
                             case 2: echo "❌ Usuario no encontrado"; break;

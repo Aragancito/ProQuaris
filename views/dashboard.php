@@ -2,7 +2,8 @@
 // ==========================================
 // VERIFICACIÓN DE SESIÓN ACTIVA
 // ==========================================
-// Verifica si ya hay una sesión activa antes de iniciar una nueva
+// ABSTRACCIÓN: session_start() maneja la persistencia de datos del usuario
+// sin exponer cómo se almacenan las sesiones (archivos, cookies, etc.)
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
@@ -26,6 +27,12 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Empleado';
     <title>Dashboard - ProQuaris</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/dashboard.css">
+
+    <!-- ========================================== -->
+    <!-- DATATABLES CSS                             -->
+    <!-- ========================================== -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
 </head>
 <body>
 <div class="dashboard-container">
@@ -37,7 +44,7 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Empleado';
             <div class="logo">ProQuaris</div>
         </div>
         <div class="user-info">
-            <!-- htmlspecialchars evita inyección XSS -->
+            <!-- htmlspecialchars previene inyección XSS -->
             <div class="user-name"><?php echo htmlspecialchars($nombreUsuario); ?></div>
             <div class="user-role"><?php echo htmlspecialchars($rolUsuario); ?></div>
         </div>
@@ -89,7 +96,6 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Empleado';
         <!-- ========================================== -->
         <!-- TARJETAS KPI (Indicadores Clave)           -->
         <!-- ========================================== -->
-        <!-- Valores estáticos de ejemplo que deben ser reemplazados por datos reales de BD -->
         <div class="kpi-grid">
             <div class="kpi-card">
                 <div class="kpi-title">Órdenes Activas</div>
@@ -104,19 +110,18 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Empleado';
             <div class="kpi-card">
                 <div class="kpi-title">Alertas de Calidad</div>
                 <div class="kpi-value">3</div>
-                <!-- trend-down indica una tendencia negativa (disminución) -->
                 <div class="kpi-trend trend-down">↓ -2 vs semana pasada</div>
             </div>
         </div>
 
         <!-- ========================================== -->
-        <!-- TABLA DE LOTES RECIENTES                   -->
+        <!-- TABLA DE LOTES RECIENTES CON DATATABLES   -->
         <!-- ========================================== -->
         <div class="table-container">
             <div class="table-header">
                 <h3>Últimos Lotes Verificados</h3>
             </div>
-            <table>
+            <table id="tablaLotes" class="display">
                 <thead>
                     <tr>
                         <th>Código Lote</th>
@@ -130,14 +135,12 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Empleado';
                         <td>LOT-2026-001</td>
                         <td>21/05/2026</td>
                         <td>500 uds</td>
-                        <!-- badge-success indica estado positivo (aprobado) -->
                         <td><span class="badge badge-success">Aprobado</span></td>
                     </tr>
                     <tr>
                         <td>LOT-2026-002</td>
                         <td>21/05/2026</td>
                         <td>350 uds</td>
-                        <!-- badge-danger indica estado negativo (rechazado) -->
                         <td><span class="badge badge-danger">Rechazado</span></td>
                     </tr>
                     <tr>
@@ -150,7 +153,6 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Empleado';
                         <td>LOT-2026-004</td>
                         <td>20/05/2026</td>
                         <td>420 uds</td>
-                        <!-- badge-warning indica estado intermedio (en revisión) -->
                         <td><span class="badge badge-warning">En revisión</span></td>
                     </tr>
                 </tbody>
@@ -158,12 +160,48 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Empleado';
         </div>
     </main>
 </div>
-</body>
+
+<!-- ========================================== -->
+<!-- JQUERY Y DATATABLES                        -->
+<!-- ========================================== -->
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+
+<script>
+    $(document).ready(function() {
+        // ==========================================
+        // INICIALIZACIÓN DE DATATABLES
+        // ==========================================
+        // ABSTRACCIÓN: DataTables oculta la lógica de paginación,
+        // búsqueda, ordenamiento y exportación de datos.
+        // POLIMORFISMO: Los botones permiten diferentes formatos de
+        // exportación (PDF, Excel, Imprimir) desde la misma tabla.
+        $('#tablaLotes').DataTable({
+            dom: 'Bfrtip',
+            buttons: [
+                { extend: 'pdf', text: '📄 Exportar PDF', className: 'btn btn-primary' },
+                { extend: 'excel', text: '📊 Exportar Excel', className: 'btn btn-success' },
+                { extend: 'print', text: '🖨️ Imprimir', className: 'btn btn-secondary' }
+            ],
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+            },
+            pageLength: 10,
+            responsive: true
+        });
+    });
+</script>
 
 <!-- ========================================== -->
 <!-- BOTPRESS CHATBOT                           -->
 <!-- ========================================== -->
 <script src="https://cdn.botpress.cloud/webchat/v3.6/inject.js"></script>
-<script src="https://files.bpcontent.cloud/2026/06/17/03/20260617035538-JZYJE355.js" defer></script>
-    
+<script src="https://files.bpcontent.cloud/2026/06/19/20/20260619201814-NV3IBOHO.js" defer></script>
+</body>
 </html>

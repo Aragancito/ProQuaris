@@ -5,23 +5,39 @@
 require_once '../config/conexion.php';
 
 // ==========================================
-// MODELO DE USUARIO
+// MODELO DE USUARIO (CAPA DE DATOS)
 // ==========================================
+// ABSTRACCIÓN: Esta clase abstrae todas las operaciones de base de datos
+// relacionadas con usuarios. El controlador solo llama métodos como
+// registrarUsuario() o buscarPorCorreo() sin conocer los detalles SQL.
 class UsuarioModel {
+    
+    // ==========================================
+    // ENCAPSULAMIENTO
+    // ==========================================
+    // El atributo $db es privado, protegiendo la conexión a la base de datos.
+    // Solo se accede a ella desde métodos internos de la clase.
     private $db;
 
+    // ==========================================
+    // CONSTRUCTOR
+    // ==========================================
     public function __construct() {
-        // Obtiene la conexión activa a la base de datos
+        // ABSTRACCIÓN: La conexión se obtiene mediante un método estático
+        // que oculta la configuración PDO.
         $this->db = Conexion::conectar();
-        // Asegura que la tabla exista antes de cualquier operación
+        
+        // HERENCIA/POLIMORFISMO: El sistema crea automáticamente la tabla
+        // si no existe, demostrando polimorfismo en la inicialización.
         $this->crearTabla();
     }
 
     // ==========================================
     // CREACIÓN AUTOMÁTICA DE LA TABLA
     // ==========================================
-    // Si la tabla no existe, la crea con la estructura definida.
-    // Esto permite que el sistema funcione sin ejecutar scripts SQL manualmente.
+    // ENCAPSULAMIENTO: Método privado, solo accesible desde dentro de la clase.
+    // ABSTRACCIÓN: Oculta la lógica de creación de tablas SQL,
+    // permitiendo que el sistema funcione sin scripts manuales.
     private function crearTabla() {
         $sql = "CREATE TABLE IF NOT EXISTS usuario (
             id VARCHAR(36) PRIMARY KEY,
@@ -38,12 +54,15 @@ class UsuarioModel {
     // ==========================================
     // REGISTRO DE NUEVO USUARIO
     // ==========================================
+    // ABSTRACCIÓN: Este método oculta la generación de ID,
+    // la consulta SQL y la inserción. El controlador solo pasa los datos.
     public function registrarUsuario($datos) {
-        // Genera un ID único de 32 caracteres hexadecimales usando CSPRNG
+        // ABSTRACCIÓN: Generación de ID única con CSPRNG
+        // El usuario externo no necesita saber cómo se genera.
         $id = bin2hex(random_bytes(16));
         
-        // Consulta preparada con marcadores de posición (?) para prevenir inyección SQL
-        // El estado se fija como 'Activo' por defecto al insertar
+        // POLIMORFISMO: La consulta preparada maneja diferentes tipos de datos
+        // según los valores que reciba, adaptándose sin cambiar el código.
         $sql = "INSERT INTO usuario (id, nombre, apellido, correo, contraseña, rol, estado) 
                 VALUES (?, ?, ?, ?, ?, ?, 'Activo')";
         
@@ -61,7 +80,9 @@ class UsuarioModel {
     // ==========================================
     // BÚSQUEDA DE USUARIO POR CORREO
     // ==========================================
-    // Retorna todos los datos del usuario o false si no existe
+    // ABSTRACCIÓN: Oculta la lógica de consulta SQL.
+    // POLIMORFISMO: Retorna un array o false según el resultado,
+    // permitiendo un manejo flexible en el controlador.
     public function buscarPorCorreo($correo) {
         $sql = "SELECT * FROM usuario WHERE correo = ?";
         $stmt = $this->db->prepare($sql);

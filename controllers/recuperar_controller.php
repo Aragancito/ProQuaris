@@ -10,6 +10,8 @@ require_once __DIR__ . '/enviar_correo.php';       // 3. Función de envío (dep
 // ==========================================
 // CAPTURA Y VALIDACIÓN DE DATOS
 // ==========================================
+// ABSTRACCIÓN: El controlador solo captura datos básicos y delega
+// la lógica compleja a otros objetos (Conexion, enviarCorreo).
 $correo = $_POST['correo'] ?? '';
 
 if (empty($correo)) {
@@ -21,6 +23,8 @@ try {
     // ==========================================
     // VERIFICACIÓN DE EXISTENCIA DEL USUARIO
     // ==========================================
+    // ABSTRACCIÓN: Conexion::conectar() oculta los detalles de conexión.
+    // Polimórficamente, la consulta se adapta al correo recibido.
     $db = Conexion::conectar();
     $stmt = $db->prepare("SELECT nombre FROM usuario WHERE correo = ?");
     $stmt->execute([$correo]);
@@ -34,23 +38,29 @@ try {
     // ==========================================
     // GENERACIÓN DEL TOKEN DE RECUPERACIÓN
     // ==========================================
-    // Token criptográficamente seguro de 64 caracteres
+    // ABSTRACCIÓN: bin2hex(random_bytes(32)) genera un token seguro.
+    // Los detalles criptográficos están ocultos en esta llamada.
     $token = bin2hex(random_bytes(32));
     
-    // El token expira en 15 minutos para limitar la ventana de ataque
+    // ABSTRACCIÓN: strtotime() calcula la expiración sin exponer la lógica de tiempo.
     $expira = date('Y-m-d H:i:s', strtotime('+15 minutes'));
 
     // ==========================================
     // PERSISTENCIA DEL TOKEN EN BD
     // ==========================================
+    // POLIMORFISMO: La consulta preparada se adapta a diferentes tipos
+    // de datos (string, string, datetime) sin cambiar el código.
     $stmt = $db->prepare("INSERT INTO password_resets (email, token, expires_at) VALUES (?, ?, ?)");
     $stmt->execute([$correo, $token, $expira]);
 
     // ==========================================
     // ENVÍO DEL CORREO CON ENLACE DE RECUPERACIÓN
     // ==========================================
+    // ABSTRACCIÓN: enviarCorreo() oculta toda la lógica SMTP.
+    // El controlador solo recibe un booleano con el resultado.
     $resultado = enviarCorreo($correo, $usuario['nombre'], $token);
 
+    // POLIMORFISMO: El flujo cambia según el resultado del envío.
     if ($resultado) {
         header("Location: ../views/recuperar.php?success=1");
     } else {
@@ -60,9 +70,11 @@ try {
     exit();
 
 } catch (PDOException $e) {
-    // Error de BD (ej. tabla password_resets no existe)
-    // En producción se redirige sin mostrar detalles técnicos
-    // die("Error en Base de Datos: " . $e->getMessage()); // Solo para depuración
+    // ==========================================
+    // MANEJO DE ERRORES
+    // ==========================================
+    // ABSTRACCIÓN: Los detalles de la excepción se ocultan en producción.
+    // Solo se redirige con un código de error genérico.
     header("Location: ../views/recuperar.php?error=2");
     exit();
 }

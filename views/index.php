@@ -191,7 +191,9 @@
 <!-- ========================================== -->
 <!-- BOTPRESS CHATBOT                           -->
 <!-- ========================================== -->
-<script src="https://cdn.botpress.cloud/webchat/v3.6/inject.js"></script>
-<script src="https://files.bpcontent.cloud/2026/06/17/03/20260617035538-JZYJE355.js" defer></script>
+
+    <script src="https://cdn.botpress.cloud/webchat/v3.6/inject.js"></script>
+<script src="https://files.bpcontent.cloud/2026/06/19/20/20260619201814-NV3IBOHO.js" defer></script>
+    
     
 </html>

@@ -21,6 +21,13 @@ $rol = $_SESSION['usuario_rol'];
     <title>Panel Empleado - ProQuaris</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/ProQuaris/views/css/dashboard_empleado.css">
+
+    <!-- ========================================== -->
+    <!-- DATATABLES CSS                             -->
+    <!-- ========================================== -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+</head>
 <body>
     <!-- ========================================== -->
     <!-- SIDEBAR - Menú lateral del empleado        -->
@@ -88,11 +95,14 @@ $rol = $_SESSION['usuario_rol'];
         // ==========================================
         // CARGAR PANEL PRINCIPAL
         // ==========================================
-        // Obtiene datos del panel desde la API y renderiza KPIs y tabla de lotes
+        // ABSTRACCIÓN: La función oculta la lógica de fetch y renderizado.
+        // El usuario solo llama a cargarPanel() y obtiene el contenido completo.
         function cargarPanel() {
+            // POLIMORFISMO: fetch se adapta a diferentes endpoints (panel, lotes, inspecciones)
             fetch('empleado_api.php?action=panel')
                 .then(r => r.json())
                 .then(d => {
+                    // ABSTRACCIÓN: Template literals ocultan la construcción del HTML
                     document.getElementById('main-content').innerHTML = `
                         <h1>Mi Panel de Control</h1>
                         <p>${new Date().toLocaleDateString()}</p>
@@ -103,7 +113,7 @@ $rol = $_SESSION['usuario_rol'];
                         </div>
                         <div class="table-container">
                             <div class="table-header"><h3>Mis Lotes Recientes</h3></div>
-                            <table>
+                            <table id="tablaLotesEmpleado" class="display">
                                 <thead>
                                     <tr><th>Código</th><th>Producto</th><th>Cantidad</th><th>Estado</th><th>Acción</th></tr>
                                 </thead>
@@ -113,7 +123,7 @@ $rol = $_SESSION['usuario_rol'];
                                             <td>${l.codigo}</td>
                                             <td>${l.producto}</td>
                                             <td>${l.cantidad}</td>
-                                            <!-- Badge condicional según estado del lote -->
+                                            <!-- POLIMORFISMO: El badge cambia según el estado -->
                                             <td><span class="badge ${l.estado === 'completado' ? 'badge-success' : 'badge-warning'}">${l.estado}</span></td>
                                             <td><button class="btn-outline" onclick="verDetalleLote(${l.id})">Ver detalle</button></td>
                                         </tr>
@@ -123,12 +133,31 @@ $rol = $_SESSION['usuario_rol'];
                         </div>
                         <button class="btn-primary" onclick="abrirModalDefecto()">+ Registrar defecto</button>
                     `;
+
+                    // ==========================================
+                    // INICIALIZAR DATATABLES DESPUÉS DE CARGAR
+                    // ==========================================
+                    if (typeof $.fn.DataTable !== 'undefined') {
+                        $('#tablaLotesEmpleado').DataTable({
+                            dom: 'Bfrtip',
+                            buttons: [
+                                { extend: 'pdf', text: '📄 Exportar PDF', className: 'btn btn-primary' },
+                                { extend: 'excel', text: '📊 Exportar Excel', className: 'btn btn-success' }
+                            ],
+                            language: {
+                                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+                            },
+                            pageLength: 10,
+                            responsive: true
+                        });
+                    }
                 }).catch(e => { document.getElementById('main-content').innerHTML = `<p>Error: ${e.message}</p>`; });
         }
 
         // ==========================================
         // CARGAR LISTA DE LOTES
         // ==========================================
+        // ABSTRACCIÓN: Oculta la lógica de fetch y renderizado de lotes.
         function cargarLotes() {
             fetch('empleado_api.php?action=lotes')
                 .then(r => r.json())
@@ -136,7 +165,7 @@ $rol = $_SESSION['usuario_rol'];
                     document.getElementById('main-content').innerHTML = `
                         <h1>Mis Lotes</h1>
                         <div class="table-container">
-                            <table>
+                            <table id="tablaLotesCompleta" class="display">
                                 <thead>
                                     <tr><th>Código</th><th>Producto</th><th>Cantidad</th><th>Fecha</th><th>Estado</th><th>Acción</th></tr>
                                 </thead>
@@ -155,12 +184,29 @@ $rol = $_SESSION['usuario_rol'];
                             </table>
                         </div>
                     `;
+
+                    // Inicializar DataTables con exportación
+                    if (typeof $.fn.DataTable !== 'undefined') {
+                        $('#tablaLotesCompleta').DataTable({
+                            dom: 'Bfrtip',
+                            buttons: [
+                                { extend: 'pdf', text: '📄 Exportar PDF', className: 'btn btn-primary' },
+                                { extend: 'excel', text: '📊 Exportar Excel', className: 'btn btn-success' }
+                            ],
+                            language: {
+                                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+                            },
+                            pageLength: 10,
+                            responsive: true
+                        });
+                    }
                 });
         }
 
         // ==========================================
         // CARGAR INSPECCIONES
         // ==========================================
+        // ABSTRACCIÓN: Oculta la lógica de fetch y renderizado de inspecciones.
         function cargarInspecciones() {
             fetch('empleado_api.php?action=inspecciones')
                 .then(r => r.json())
@@ -172,7 +218,7 @@ $rol = $_SESSION['usuario_rol'];
                     document.getElementById('main-content').innerHTML = `
                         <h1>Inspecciones de Calidad</h1>
                         <div class="table-container">
-                            <table>
+                            <table id="tablaInspecciones" class="display">
                                 <thead>
                                     <tr><th>Lote</th><th>Fecha</th><th>Resultado</th><th>Observaciones</th></tr>
                                 </thead>
@@ -189,12 +235,30 @@ $rol = $_SESSION['usuario_rol'];
                             </table>
                         </div>
                     `;
+
+                    // Inicializar DataTables con exportación
+                    if (typeof $.fn.DataTable !== 'undefined') {
+                        $('#tablaInspecciones').DataTable({
+                            dom: 'Bfrtip',
+                            buttons: [
+                                { extend: 'pdf', text: '📄 Exportar PDF', className: 'btn btn-primary' },
+                                { extend: 'excel', text: '📊 Exportar Excel', className: 'btn btn-success' }
+                            ],
+                            language: {
+                                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
+                            },
+                            pageLength: 10,
+                            responsive: true
+                        });
+                    }
                 });
         }
 
         // ==========================================
         // VER DETALLE DE LOTE (MODAL)
         // ==========================================
+        // ABSTRACCIÓN: Oculta la lógica de fetch y renderizado del detalle.
+        // ENCAPSULAMIENTO: El modal se abre y cierra mediante funciones específicas.
         function verDetalleLote(id) {
             fetch('empleado_api.php?action=detalle_lote&id=' + id)
                 .then(r => r.json())
@@ -229,7 +293,8 @@ $rol = $_SESSION['usuario_rol'];
         // ==========================================
         // ENVÍO DEL FORMULARIO DE DEFECTO
         // ==========================================
-        // Usa FormData para enviar los datos vía POST a la API
+        // ABSTRACCIÓN: Usa FormData para ocultar la construcción del payload.
+        // POLIMORFISMO: fetch se adapta a POST con diferentes datos.
         document.getElementById('formDefecto').addEventListener('submit', (e) => {
             e.preventDefault();
             const fd = new FormData();
@@ -254,13 +319,15 @@ $rol = $_SESSION['usuario_rol'];
         // ==========================================
         // FUNCIONES AUXILIARES DE MODALES
         // ==========================================
+        // ENCAPSULAMIENTO: Funciones específicas para controlar los modales.
         function cerrarModal() { document.getElementById('modalDefecto').style.display = 'none'; document.getElementById('formDefecto').reset(); }
         function cerrarModalDetalle() { document.getElementById('modalDetalle').style.display = 'none'; }
 
         // ==========================================
         // NAVEGACIÓN POR MENÚ LATERAL
         // ==========================================
-        // Escucha clics en los items del menú y carga la página correspondiente
+        // POLIMORFISMO: El mismo manejador de eventos decide qué función ejecutar
+        // según la página seleccionada.
         document.querySelectorAll('.nav-item[data-page]').forEach(el => {
             el.addEventListener('click', () => {
                 document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
@@ -279,12 +346,23 @@ $rol = $_SESSION['usuario_rol'];
         // Carga el panel principal al cargar la página
         cargarPanel();
     </script>
-</body>
 
     <!-- ========================================== -->
-    <!-- BOTPRESS CHATBOT                           -->
+    <!-- JQUERY Y DATATABLES                        -->
     <!-- ========================================== -->
-    <script src="https://cdn.botpress.cloud/webchat/v3.6/inject.js"></script>
-    <script src="https://files.bpcontent.cloud/2026/06/17/03/20260617035538-JZYJE355.js" defer></script>
-    
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+</body>
+
+<!-- ========================================== -->
+<!-- BOTPRESS CHATBOT                           -->
+<!-- ========================================== -->
+<script src="https://cdn.botpress.cloud/webchat/v3.6/inject.js"></script>
+<script src="https://files.bpcontent.cloud/2026/06/19/20/20260619201814-NV3IBOHO.js" defer></script>
 </html>

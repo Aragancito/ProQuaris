@@ -11,4 +11,4 @@ define("SMTP_SECURE", "TLS");
 // Tiempo de vida del token de recuperación en segundos (por defecto 1 minuto)
 // Se usa para controlar la expiración de los enlaces de restablecimiento de contraseña
 // Actualmente configurado a 60 segundos (1 minuto) para pruebas rápidas
-define("TIEMPO_VIDA", time() + 60);
+define("TIEMPO_VIDA", time() + 180);
