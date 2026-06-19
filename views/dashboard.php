@@ -1,13 +1,19 @@
 <?php
+// ==========================================
+// VERIFICACIÓN DE SESIÓN ACTIVA
+// ==========================================
+// Verifica si ya hay una sesión activa antes de iniciar una nueva
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
+// Si no hay sesión, redirige al login para evitar acceso no autorizado
 if (!isset($_SESSION['usuario_nombre'])) {
     header("Location: login.php");
     exit();
 }
 
+// Recupera los datos del usuario desde la sesión con valores por defecto
 $nombreUsuario = $_SESSION['usuario_nombre'] ?? 'Usuario';
 $rolUsuario = $_SESSION['usuario_rol'] ?? 'Empleado';
 ?>
@@ -23,15 +29,20 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Empleado';
 </head>
 <body>
 <div class="dashboard-container">
+    <!-- ========================================== -->
+    <!-- SIDEBAR - Menú lateral del administrador   -->
+    <!-- ========================================== -->
     <aside class="sidebar">
         <div class="sidebar-header">
             <div class="logo">ProQuaris</div>
         </div>
         <div class="user-info">
+            <!-- htmlspecialchars evita inyección XSS -->
             <div class="user-name"><?php echo htmlspecialchars($nombreUsuario); ?></div>
             <div class="user-role"><?php echo htmlspecialchars($rolUsuario); ?></div>
         </div>
         <nav class="nav-menu">
+            <!-- Cada item del menú corresponde a un módulo del sistema -->
             <a href="#" class="nav-item active">
                 <span class="nav-icon">📊</span>
                 <span>Inicio (Resumen)</span>
@@ -53,6 +64,7 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Empleado';
                 <span>Usuarios y Roles</span>
             </a>
         </nav>
+        <!-- Cierre de sesión siempre visible al final del sidebar -->
         <div style="padding: 20px;">
             <a href="../controllers/UsuarioController.php?logout=true" class="nav-item" style="color: #FF5252;">
                 <span class="nav-icon">🚪</span>
@@ -61,14 +73,23 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Empleado';
         </div>
     </aside>
 
+    <!-- ========================================== -->
+    <!-- CONTENIDO PRINCIPAL                        -->
+    <!-- ========================================== -->
     <main class="main-content">
+        <!-- Encabezado con título y fecha actual -->
         <div class="top-bar">
             <div class="page-title">
                 <h1>Panel de Control Principal</h1>
+                <!-- date('F, Y') muestra el mes y año en formato texto -->
                 <p><?php echo date('F, Y'); ?></p>
             </div>
         </div>
 
+        <!-- ========================================== -->
+        <!-- TARJETAS KPI (Indicadores Clave)           -->
+        <!-- ========================================== -->
+        <!-- Valores estáticos de ejemplo que deben ser reemplazados por datos reales de BD -->
         <div class="kpi-grid">
             <div class="kpi-card">
                 <div class="kpi-title">Órdenes Activas</div>
@@ -83,10 +104,14 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Empleado';
             <div class="kpi-card">
                 <div class="kpi-title">Alertas de Calidad</div>
                 <div class="kpi-value">3</div>
+                <!-- trend-down indica una tendencia negativa (disminución) -->
                 <div class="kpi-trend trend-down">↓ -2 vs semana pasada</div>
             </div>
         </div>
 
+        <!-- ========================================== -->
+        <!-- TABLA DE LOTES RECIENTES                   -->
+        <!-- ========================================== -->
         <div class="table-container">
             <div class="table-header">
                 <h3>Últimos Lotes Verificados</h3>
@@ -105,12 +130,14 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Empleado';
                         <td>LOT-2026-001</td>
                         <td>21/05/2026</td>
                         <td>500 uds</td>
+                        <!-- badge-success indica estado positivo (aprobado) -->
                         <td><span class="badge badge-success">Aprobado</span></td>
                     </tr>
                     <tr>
                         <td>LOT-2026-002</td>
                         <td>21/05/2026</td>
                         <td>350 uds</td>
+                        <!-- badge-danger indica estado negativo (rechazado) -->
                         <td><span class="badge badge-danger">Rechazado</span></td>
                     </tr>
                     <tr>
@@ -123,6 +150,7 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Empleado';
                         <td>LOT-2026-004</td>
                         <td>20/05/2026</td>
                         <td>420 uds</td>
+                        <!-- badge-warning indica estado intermedio (en revisión) -->
                         <td><span class="badge badge-warning">En revisión</span></td>
                     </tr>
                 </tbody>
@@ -132,7 +160,10 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Empleado';
 </div>
 </body>
 
-    <script src="https://cdn.botpress.cloud/webchat/v3.6/inject.js"></script>
+<!-- ========================================== -->
+<!-- BOTPRESS CHATBOT                           -->
+<!-- ========================================== -->
+<script src="https://cdn.botpress.cloud/webchat/v3.6/inject.js"></script>
 <script src="https://files.bpcontent.cloud/2026/06/17/03/20260617035538-JZYJE355.js" defer></script>
     
 </html>

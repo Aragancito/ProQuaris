@@ -1,10 +1,15 @@
 <?php
+// ==========================================
+// VERIFICACIÓN DE SESIÓN ACTIVA
+// ==========================================
 session_start();
+// Si no hay sesión, redirige al login para evitar acceso no autorizado
 if (!isset($_SESSION['usuario_nombre'])) {
     header("Location: login.php");
     exit();
 }
 
+// Recupera los datos del usuario desde la sesión
 $nombre = $_SESSION['usuario_nombre'];
 $rol = $_SESSION['usuario_rol'];
 ?>
@@ -17,12 +22,17 @@ $rol = $_SESSION['usuario_rol'];
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/ProQuaris/views/css/dashboard_empleado.css">
 <body>
+    <!-- ========================================== -->
+    <!-- SIDEBAR - Menú lateral del empleado        -->
+    <!-- ========================================== -->
     <div class="sidebar">
         <div class="logo">ProQuaris</div>
         <div class="user-info">
+            <!-- htmlspecialchars evita inyección XSS -->
             <div class="user-name"><?php echo htmlspecialchars($nombre); ?></div>
             <div class="user-role"><?php echo htmlspecialchars($rol); ?></div>
         </div>
+        <!-- data-page identifica la sección a cargar vía fetch -->
         <div class="nav-item active" data-page="panel"><span class="nav-icon">📊</span> Mi Panel</div>
         <div class="nav-item" data-page="lotes"><span class="nav-icon">🏷️</span> Mis Lotes</div>
         <div class="nav-item" data-page="defectos"><span class="nav-icon">🔍</span> Registrar Defecto</div>
@@ -30,12 +40,20 @@ $rol = $_SESSION['usuario_rol'];
         <a href="../controllers/UsuarioController.php?logout=true" class="nav-item logout-btn"><span class="nav-icon">🚪</span> Cerrar Sesión</a>
     </div>
 
+    <!-- ========================================== -->
+    <!-- CONTENIDO PRINCIPAL                        -->
+    <!-- ========================================== -->
+    <!-- Se carga dinámicamente vía JavaScript según la opción seleccionada -->
     <div class="main-content" id="main-content">Cargando...</div>
 
+    <!-- ========================================== -->
+    <!-- MODAL: Registrar Defecto                   -->
+    <!-- ========================================== -->
     <div id="modalDefecto" class="modal">
         <div class="modal-content">
             <h3>Registrar Defecto</h3>
             <form id="formDefecto">
+                <!-- Los lotes se cargan dinámicamente desde la API -->
                 <select id="lote_id" required><option value="">Seleccione un lote</option></select>
                 <input type="text" id="tipo_defecto" placeholder="Tipo de defecto" required>
                 <select id="severidad" required>
@@ -53,10 +71,13 @@ $rol = $_SESSION['usuario_rol'];
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- MODAL: Detalle de Lote                     -->
+    <!-- ========================================== -->
     <div id="modalDetalle" class="modal">
         <div class="modal-content" style="width: 500px;">
             <h3>Detalle del Lote</h3>
-            <div id="detalleLote"></div>
+            <div id="detalleLote"></div> <!-- Se llena dinámicamente vía fetch -->
             <div class="modal-buttons">
                 <button type="button" class="btn-cancel" onclick="cerrarModalDetalle()">Cerrar</button>
             </div>
@@ -64,6 +85,10 @@ $rol = $_SESSION['usuario_rol'];
     </div>
 
     <script>
+        // ==========================================
+        // CARGAR PANEL PRINCIPAL
+        // ==========================================
+        // Obtiene datos del panel desde la API y renderiza KPIs y tabla de lotes
         function cargarPanel() {
             fetch('empleado_api.php?action=panel')
                 .then(r => r.json())
@@ -88,6 +113,7 @@ $rol = $_SESSION['usuario_rol'];
                                             <td>${l.codigo}</td>
                                             <td>${l.producto}</td>
                                             <td>${l.cantidad}</td>
+                                            <!-- Badge condicional según estado del lote -->
                                             <td><span class="badge ${l.estado === 'completado' ? 'badge-success' : 'badge-warning'}">${l.estado}</span></td>
                                             <td><button class="btn-outline" onclick="verDetalleLote(${l.id})">Ver detalle</button></td>
                                         </tr>
@@ -100,6 +126,9 @@ $rol = $_SESSION['usuario_rol'];
                 }).catch(e => { document.getElementById('main-content').innerHTML = `<p>Error: ${e.message}</p>`; });
         }
 
+        // ==========================================
+        // CARGAR LISTA DE LOTES
+        // ==========================================
         function cargarLotes() {
             fetch('empleado_api.php?action=lotes')
                 .then(r => r.json())
@@ -129,6 +158,9 @@ $rol = $_SESSION['usuario_rol'];
                 });
         }
 
+        // ==========================================
+        // CARGAR INSPECCIONES
+        // ==========================================
         function cargarInspecciones() {
             fetch('empleado_api.php?action=inspecciones')
                 .then(r => r.json())
@@ -160,6 +192,9 @@ $rol = $_SESSION['usuario_rol'];
                 });
         }
 
+        // ==========================================
+        // VER DETALLE DE LOTE (MODAL)
+        // ==========================================
         function verDetalleLote(id) {
             fetch('empleado_api.php?action=detalle_lote&id=' + id)
                 .then(r => r.json())
@@ -176,6 +211,10 @@ $rol = $_SESSION['usuario_rol'];
                 });
         }
 
+        // ==========================================
+        // ABRIR MODAL DE REGISTRO DE DEFECTO
+        // ==========================================
+        // Carga los lotes disponibles desde la API antes de mostrar el modal
         function abrirModalDefecto() {
             fetch('empleado_api.php?action=mislotes')
                 .then(r => r.json())
@@ -187,6 +226,10 @@ $rol = $_SESSION['usuario_rol'];
                 });
         }
 
+        // ==========================================
+        // ENVÍO DEL FORMULARIO DE DEFECTO
+        // ==========================================
+        // Usa FormData para enviar los datos vía POST a la API
         document.getElementById('formDefecto').addEventListener('submit', (e) => {
             e.preventDefault();
             const fd = new FormData();
@@ -208,9 +251,16 @@ $rol = $_SESSION['usuario_rol'];
                 });
         });
 
+        // ==========================================
+        // FUNCIONES AUXILIARES DE MODALES
+        // ==========================================
         function cerrarModal() { document.getElementById('modalDefecto').style.display = 'none'; document.getElementById('formDefecto').reset(); }
         function cerrarModalDetalle() { document.getElementById('modalDetalle').style.display = 'none'; }
 
+        // ==========================================
+        // NAVEGACIÓN POR MENÚ LATERAL
+        // ==========================================
+        // Escucha clics en los items del menú y carga la página correspondiente
         document.querySelectorAll('.nav-item[data-page]').forEach(el => {
             el.addEventListener('click', () => {
                 document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
@@ -223,11 +273,18 @@ $rol = $_SESSION['usuario_rol'];
             });
         });
 
+        // ==========================================
+        // INICIALIZACIÓN
+        // ==========================================
+        // Carga el panel principal al cargar la página
         cargarPanel();
     </script>
 </body>
 
+    <!-- ========================================== -->
+    <!-- BOTPRESS CHATBOT                           -->
+    <!-- ========================================== -->
     <script src="https://cdn.botpress.cloud/webchat/v3.6/inject.js"></script>
-<script src="https://files.bpcontent.cloud/2026/06/17/03/20260617035538-JZYJE355.js" defer></script>
+    <script src="https://files.bpcontent.cloud/2026/06/17/03/20260617035538-JZYJE355.js" defer></script>
     
 </html>

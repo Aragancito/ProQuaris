@@ -1,5 +1,9 @@
 <?php
+// ==========================================
+// VERIFICACIÓN DE SESIÓN ACTIVA
+// ==========================================
 session_start();
+// Si el usuario ya tiene sesión activa, lo redirige al dashboard según su rol
 if (isset($_SESSION['usuario_nombre'])) {
     if ($_SESSION['usuario_rol'] === 'Administrador') {
         header("Location: dashboard.php");
@@ -15,12 +19,17 @@ if (isset($_SESSION['usuario_nombre'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Sesión - ProQuaris</title>
+    <!-- Fuente Inter para tipografía moderna -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Estilos específicos para el login -->
     <link rel="stylesheet" href="css/login.css">
 </head>
 <body>
     <div class="login-container">
         <div class="login-card">
+            <!-- ========================================== -->
+            <!-- LOGO Y TÍTULO                              -->
+            <!-- ========================================== -->
             <div class="logo">
                 <h1>ProQuaris</h1>
                 <p>Gestión de Producción y Calidad</p>
@@ -29,9 +38,13 @@ if (isset($_SESSION['usuario_nombre'])) {
             <h2 class="titulo">Bienvenido</h2>
             <p class="subtitulo">Ingresa tus credenciales</p>
 
+            <!-- ========================================== -->
+            <!-- MENSAJES DE ERROR O ÉXITO                  -->
+            <!-- ========================================== -->
             <?php if (isset($_GET['error'])): ?>
                 <div class="error-message">
                     <?php 
+                        // Muestra un mensaje específico según el código de error recibido
                         switch($_GET['error']) {
                             case 1: echo "❌ Usuario o contraseña incorrectos"; break;
                             case 2: echo "❌ Usuario no encontrado"; break;
@@ -47,6 +60,9 @@ if (isset($_SESSION['usuario_nombre'])) {
                 </div>
             <?php endif; ?>
 
+            <!-- ========================================== -->
+            <!-- FORMULARIO DE LOGIN                        -->
+            <!-- ========================================== -->
             <form action="../controllers/UsuarioController.php" method="POST">
                 <div class="input-group">
                     <label>Correo electrónico</label>
@@ -61,6 +77,9 @@ if (isset($_SESSION['usuario_nombre'])) {
                 <button type="submit" class="btn-login">Iniciar Sesión</button>
             </form>
 
+            <!-- ========================================== -->
+            <!-- ENLACES SECUNDARIOS                        -->
+            <!-- ========================================== -->
             <div class="links">
                 <a href="recuperar.php">¿Olvidaste tu contraseña?</a>
                 <a href="registro.php">Registrar nuevo personal →</a>
@@ -69,7 +88,10 @@ if (isset($_SESSION['usuario_nombre'])) {
     </div>
 </body>
 
-    <script src="https://cdn.botpress.cloud/webchat/v3.6/inject.js"></script>
+<!-- ========================================== -->
+<!-- BOTPRESS CHATBOT                           -->
+<!-- ========================================== -->
+<script src="https://cdn.botpress.cloud/webchat/v3.6/inject.js"></script>
 <script src="https://files.bpcontent.cloud/2026/06/17/03/20260617035538-JZYJE355.js" defer></script>
     
 </html>
