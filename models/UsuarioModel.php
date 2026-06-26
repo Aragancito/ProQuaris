@@ -5,40 +5,72 @@
 require_once '../config/conexion.php';
 
 // ==========================================
-// MODELO DE USUARIO (CAPA DE DATOS)
+// INTERFAZ DE REPOSITORIO DE USUARIO
 // ==========================================
-// ABSTRACCIÓN: Esta clase abstrae todas las operaciones de base de datos
-// relacionadas con usuarios. El controlador solo llama métodos como
-// registrarUsuario() o buscarPorCorreo() sin conocer los detalles SQL.
-class UsuarioModel {
-    
-    // ==========================================
-    // ENCAPSULAMIENTO
-    // ==========================================
-    // El atributo $db es privado, protegiendo la conexión a la base de datos.
-    // Solo se accede a ella desde métodos internos de la clase.
+// ABSTRACCIÓN: Define el contrato para cualquier repositorio de usuarios.
+// Permite sustituir implementaciones sin afectar al resto del sistema (Dependency Inversion).
+interface UsuarioRepositoryInterface {
+    public function registrar(array $datos): bool;
+    public function buscarPorCorreo(string $correo): ?array;
+}
+
+// ==========================================
+// REPOSITORIO DE USUARIO (CAPA DE DATOS)
+// ==========================================
+// S (Single Responsibility): Esta clase tiene UNA ÚNICA responsabilidad:
+// interactuar con la base de datos para usuarios.
+// La conexión y la creación de tablas se delegan a otras clases.
+class UsuarioRepository implements UsuarioRepositoryInterface {
     private $db;
 
-    // ==========================================
-    // CONSTRUCTOR
-    // ==========================================
-    public function __construct() {
-        // ABSTRACCIÓN: La conexión se obtiene mediante un método estático
-        // que oculta la configuración PDO.
-        $this->db = Conexion::conectar();
-        
-        // HERENCIA/POLIMORFISMO: El sistema crea automáticamente la tabla
-        // si no existe, demostrando polimorfismo en la inicialización.
-        $this->crearTabla();
+    // D (Dependency Inversion): La conexión se inyecta desde el constructor.
+    // Ya no depende de un método estático de Conexion.
+    public function __construct(PDO $db) {
+        $this->db = $db;
     }
 
-    // ==========================================
-    // CREACIÓN AUTOMÁTICA DE LA TABLA
-    // ==========================================
-    // ENCAPSULAMIENTO: Método privado, solo accesible desde dentro de la clase.
-    // ABSTRACCIÓN: Oculta la lógica de creación de tablas SQL,
-    // permitiendo que el sistema funcione sin scripts manuales.
-    private function crearTabla() {
+    public function registrar(array $datos): bool {
+        // Generación de ID única con CSPRNG
+        $id = bin2hex(random_bytes(16));
+        
+        $sql = "INSERT INTO usuario (id, nombre, apellido, correo, contraseña, rol, estado) 
+                VALUES (?, ?, ?, ?, ?, ?, 'Activo')";
+        
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([
+            $id,
+            $datos['nombre'],
+            $datos['apellido'],
+            $datos['correo'],
+            $datos['contrasena'],
+            $datos['rol']
+        ]);
+    }
+
+    public function buscarPorCorreo(string $correo): ?array {
+        $sql = "SELECT * FROM usuario WHERE correo = ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$correo]);
+        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $resultado ?: null;
+    }
+}
+
+// ==========================================
+// CONSTRUCTOR DE TABLAS (NUEVA CLASE)
+// ==========================================
+// S (Single Responsibility): Esta clase solo se encarga de crear tablas.
+// Esta responsabilidad estaba mezclada en UsuarioModel original.
+class TableCreator {
+    private $db;
+
+    public function __construct(PDO $db) {
+        $this->db = $db;
+    }
+
+    // O (Open/Closed): Se puede extender agregando nuevas tablas
+    // sin modificar el código existente.
+    public function crearTablaUsuario(): void {
         $sql = "CREATE TABLE IF NOT EXISTS usuario (
             id VARCHAR(36) PRIMARY KEY,
             nombre VARCHAR(30) NOT NULL,
@@ -50,44 +82,52 @@ class UsuarioModel {
         )";
         $this->db->exec($sql);
     }
-
-    // ==========================================
-    // REGISTRO DE NUEVO USUARIO
-    // ==========================================
-    // ABSTRACCIÓN: Este método oculta la generación de ID,
-    // la consulta SQL y la inserción. El controlador solo pasa los datos.
-    public function registrarUsuario($datos) {
-        // ABSTRACCIÓN: Generación de ID única con CSPRNG
-        // El usuario externo no necesita saber cómo se genera.
-        $id = bin2hex(random_bytes(16));
-        
-        // POLIMORFISMO: La consulta preparada maneja diferentes tipos de datos
-        // según los valores que reciba, adaptándose sin cambiar el código.
-        $sql = "INSERT INTO usuario (id, nombre, apellido, correo, contraseña, rol, estado) 
-                VALUES (?, ?, ?, ?, ?, ?, 'Activo')";
-        
-        $stmt = $this->db->prepare($sql);
-        return $stmt->execute([
-            $id,
-            $datos['nombre'],
-            $datos['apellido'],
-            $datos['correo'],
-            $datos['contrasena'], // Debe venir ya hasheada desde el controlador
-            $datos['rol']
-        ]);
-    }
-
-    // ==========================================
-    // BÚSQUEDA DE USUARIO POR CORREO
-    // ==========================================
-    // ABSTRACCIÓN: Oculta la lógica de consulta SQL.
-    // POLIMORFISMO: Retorna un array o false según el resultado,
-    // permitiendo un manejo flexible en el controlador.
-    public function buscarPorCorreo($correo) {
-        $sql = "SELECT * FROM usuario WHERE correo = ?";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$correo]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
 }
+
+// ==========================================
+// FACTORÍA DE REPOSITORIO
+// ==========================================
+// Esta clase centraliza la creación de dependencias.
+// Facilita la inyección de dependencias en el resto del sistema.
+class RepositoryFactory {
+    private static $db = null;
+    private static $usuarioRepository = null;
+    private static $tableCreator = null;
+
+    public static function getDb(): PDO {
+        if (self::$db === null) {
+            self::$db = Conexion::conectar();
+        }
+        return self::$db;
+    }
+
+    public static function getUsuarioRepository(): UsuarioRepository {
+        if (self::$usuarioRepository === null) {
+            self::$usuarioRepository = new UsuarioRepository(self::getDb());
+        }
+        return self::$usuarioRepository;
+    }
+
+    public static function getTableCreator(): TableCreator {
+        if (self::$tableCreator === null) {
+            self::$tableCreator = new TableCreator(self::getDb());
+        }
+        return self::$tableCreator;
+    }
+
+    // O (Open/Closed): Se pueden agregar nuevos repositorios aquí
+    // sin modificar el código existente.
+}
+
+// ==========================================
+// INICIALIZACIÓN DEL SISTEMA
+// ==========================================
+// En lugar de tener la creación de tablas en el constructor del modelo,
+// ahora se llama explícitamente desde un punto de entrada.
+// Esto evita que la tabla se cree cada vez que se instancia el modelo.
+$tableCreator = RepositoryFactory::getTableCreator();
+$tableCreator->crearTablaUsuario();
+
+// Para usar el repositorio en el controlador:
+// $usuarioRepo = RepositoryFactory::getUsuarioRepository();
 ?>

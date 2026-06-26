@@ -2,124 +2,137 @@
 // ==========================================
 // CARGA DEL MODELO Y SESIÓN
 // ==========================================
-require_once '../models/UsuarioModel.php';
+// Usamos RepositoryFactory en lugar de UsuarioModel directamente
+require_once '../models/RepositoryFactory.php';
 session_start();
 
 // ==========================================
-// CONTROLADOR DE USUARIOS
+// INTERFAZ DE SERVICIO DE AUTENTICACIÓN
 // ==========================================
-// ABSTRACCIÓN: Esta clase oculta toda la complejidad de autenticación,
-// registro y gestión de sesiones, exponiendo solo el método público
-// manejarPeticion() como punto de entrada.
-class UsuarioController {
-    
-    // ==========================================
-    // ENCAPSULAMIENTO
-    // ==========================================
-    // El atributo $model es privado, protegiendo el acceso directo.
-    // Solo se interactúa con él a través de los métodos de la clase.
-    private $model;
+interface AuthServiceInterface {
+    public function login(string $correo, string $contraseña): ?array;
+    public function registrar(array $datos): bool;
+    public function logout(): void;
+}
 
-    // ==========================================
-    // CONSTRUCTOR
-    // ==========================================
-    // Inicializa el modelo de usuario. La dependencia se crea internamente
-    // (no se inyecta desde fuera), lo que mantiene el acoplamiento bajo.
-    public function __construct() {
-        $this->model = new UsuarioModel();
+// ==========================================
+// SERVICIO DE AUTENTICACIÓN (LÓGICA DE NEGOCIO)
+// ==========================================
+// S (Single Responsibility): Solo gestiona autenticación.
+// D (Dependency Inversion): Depende de la abstracción UsuarioRepositoryInterface.
+class AuthService implements AuthServiceInterface {
+    private $usuarioRepository;
+
+    // Se inyecta el repositorio (ya no se usa UsuarioModel directamente)
+    public function __construct(UsuarioRepositoryInterface $usuarioRepository) {
+        $this->usuarioRepository = $usuarioRepository;
     }
 
-    // ==========================================
-    // ABSTRACCIÓN Y POLIMORFISMO
-    // ==========================================
-    // Este método actúa como un enrutador (Router). Polimórficamente,
-    // decide qué acción ejecutar según el método HTTP (POST/GET) y los parámetros.
-    public function manejarPeticion() {
+    public function login(string $correo, string $contraseña): ?array {
+        $usuario = $this->usuarioRepository->buscarPorCorreo($correo);
+        
+        if ($usuario && password_verify($contraseña, $usuario['contraseña'])) {
+            return $usuario;
+        }
+        return null;
+    }
+
+    public function registrar(array $datos): bool {
+        $datos['contrasena'] = password_hash($datos['contrasena'], PASSWORD_DEFAULT);
+        return $this->usuarioRepository->registrar($datos);
+    }
+
+    public function logout(): void {
+        $_SESSION = array();
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000, $params["path"], $params["domain"], $params["secure"], $params["httponly"]);
+        }
+        session_destroy();
+    }
+}
+
+// ==========================================
+// CONTROLADOR DE USUARIOS (REFACTORIZADO)
+// ==========================================
+class UsuarioController {
+    private $authService;
+    private $routeHandlers;
+
+    public function __construct(AuthServiceInterface $authService) {
+        $this->authService = $authService;
+        
+        $this->routeHandlers = [
+            'registrar' => fn() => $this->handleRegistrar(),
+            'login'     => fn() => $this->handleLogin(),
+            'logout'    => fn() => $this->handleLogout(),
+        ];
+    }
+
+    public function manejarPeticion(): void {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            if (isset($_POST['accion']) && $_POST['accion'] === 'registrar') {
-                $this->registrar();
-            } else {
-                $this->login();
-            }
+            $accion = $_POST['accion'] ?? 'login';
+            $handler = $this->routeHandlers[$accion] ?? $this->routeHandlers['login'];
+            $handler();
         } elseif (isset($_GET['logout'])) {
-            $this->logout();
+            $this->routeHandlers['logout']();
         }
     }
 
-    // ==========================================
-    // INICIO DE SESIÓN (LÓGICA DE NEGOCIO)
-    // ==========================================
-    // ENCAPSULAMIENTO: Método privado, solo accesible desde dentro de la clase.
-    private function login() {
-        // Captura y sanitización básica de datos de entrada
+    private function handleLogin(): void {
         $correo = $_POST['correo'] ?? '';
         $contraseña = $_POST['contraseña'] ?? '';
         
-        // El modelo se encarga de la consulta a la base de datos
-        $usuario = $this->model->buscarPorCorreo($correo);
-
-        // Verificación segura de credenciales usando password_verify()
-        if ($usuario && password_verify($contraseña, $usuario['contraseña'])) {
-            // Persistencia de datos en sesión
+        $usuario = $this->authService->login($correo, $contraseña);
+        
+        if ($usuario) {
             $_SESSION['usuario_nombre'] = $usuario['nombre'] . " " . $usuario['apellido'];
             $_SESSION['usuario_rol'] = $usuario['rol'];
             
-            // POLIMORFISMO: El flujo cambia según el rol del usuario
-            if ($usuario['rol'] === 'Administrador') {
-                header("Location: ../views/dashboard.php");
-            } else {
-                header("Location: ../views/dashboard_empleado.php");
-            }
-            exit();
-        } else {
-            // Credenciales inválidas: redirige al login con mensaje de error
-            header("Location: ../views/login.php?error=1");
+            $dashboard = $usuario['rol'] === 'Administrador' 
+                ? '../views/dashboard.php' 
+                : '../views/dashboard_empleado.php';
+            
+            header("Location: $dashboard");
             exit();
         }
-    }
-
-    // ==========================================
-    // REGISTRO DE USUARIO (LÓGICA DE NEGOCIO)
-    // ==========================================
-    // ENCAPSULAMIENTO: Método privado.
-    private function registrar() {
-        // ABSTRACCIÓN: El hash de la contraseña se delega a password_hash()
-        // Los detalles de encriptación están ocultos en esta línea.
-        $datos = [
-            'nombre' => $_POST['nombre'],
-            'apellido' => $_POST['apellido'],
-            'correo' => $_POST['correo'],
-            'contrasena' => password_hash($_POST['contrasena'], PASSWORD_DEFAULT),
-            'rol' => $_POST['rol']
-        ];
         
-        // Delegación al modelo para persistencia
-        $resultado = $this->model->registrarUsuario($datos);
-        
-        if ($resultado) {
-            header("Location: ../views/login.php?registro=exitoso");
-        } else {
-            header("Location: ../views/registro.php?error=1");
-        }
+        header("Location: ../views/login.php?error=1");
         exit();
     }
 
-    // ==========================================
-    // CIERRE DE SESIÓN
-    // ==========================================
-    // ENCAPSULAMIENTO: Método privado.
-    private function logout() {
-        // Destrucción completa de la sesión para evitar acceso no autorizado
-        session_destroy();
+    private function handleRegistrar(): void {
+        $datos = [
+            'nombre' => $_POST['nombre'] ?? '',
+            'apellido' => $_POST['apellido'] ?? '',
+            'correo' => $_POST['correo'] ?? '',
+            'contrasena' => $_POST['contrasena'] ?? '',
+            'rol' => $_POST['rol'] ?? 'Empleado'
+        ];
+        
+        $resultado = $this->authService->registrar($datos);
+        
+        $destino = $resultado 
+            ? '../views/login.php?registro=exitoso' 
+            : '../views/registro.php?error=1';
+        
+        header("Location: $destino");
+        exit();
+    }
+
+    private function handleLogout(): void {
+        $this->authService->logout();
         header("Location: ../views/index.php");
         exit();
     }
 }
 
 // ==========================================
-// INSTANCIACIÓN Y EJECUCIÓN
+// INSTANCIACIÓN CON INYECCIÓN DE DEPENDENCIAS
 // ==========================================
-// ABSTRACCIÓN: El usuario externo solo conoce la clase y su método público.
-$controller = new UsuarioController();
+// Usamos RepositoryFactory para obtener el repositorio
+$usuarioRepo = RepositoryFactory::getUsuarioRepository();
+$authService = new AuthService($usuarioRepo);
+$controller = new UsuarioController($authService);
 $controller->manejarPeticion();
 ?>

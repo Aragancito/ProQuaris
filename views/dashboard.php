@@ -24,6 +24,16 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Empleado';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- ========================================== -->
+    <!-- META TAGS PARA EVITAR CACHÉ (LOGOUT)      -->
+    <!-- ========================================== -->
+    <!-- Estos meta tags evitan que el navegador guarde la página en caché,
+         forzando una carga fresca desde el servidor. Esto es crítico para
+         que después del logout el usuario no pueda retroceder y ver datos
+         de sesiones anteriores. -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Dashboard - ProQuaris</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/dashboard.css">
@@ -201,7 +211,13 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Empleado';
 <!-- ========================================== -->
 <!-- BOTPRESS CHATBOT                           -->
 <!-- ========================================== -->
-<script src="https://cdn.botpress.cloud/webchat/v3.6/inject.js"></script>
-<script src="https://files.bpcontent.cloud/2026/06/19/20/20260619201814-NV3IBOHO.js" defer></script>
+<script type="module">
+    import Chatbot from "https://cdn.jsdelivr.net/npm/flowise-embed/dist/web.js"
+    Chatbot.init({
+        chatflowid: "50de36ef-a39c-4cfa-a795-e95952c78ebe",
+        apiHost: "https://cloud.flowiseai.com",
+    })
+</script>
+
 </body>
 </html>
