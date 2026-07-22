@@ -17,7 +17,7 @@
     <!-- Fuente Inter para una tipografía moderna y legible -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Estilos principales del index (carrusel, features, stats, footer) -->
-    <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="views/css/index.css">
 </head>
 <body>
     <!-- ========================================== -->
@@ -28,8 +28,8 @@
         <div class="logo">ProQuaris</div>
         <div class="nav-buttons">
             <!-- Enlaces a login y registro visibles para usuarios no autenticados -->
-            <a href="login.php" class="btn-nav btn-login">Iniciar Sesión</a>
-            <a href="registro.php" class="btn-nav btn-register">Registrarse</a>
+            <a href="views/login.php" class="btn-nav btn-login">Iniciar Sesión</a>
+            <a href="views/registro.php" class="btn-nav btn-register">Registrarse</a>
         </div>
     </nav>
 
@@ -41,7 +41,7 @@
         <div class="carrusel-slides" id="carruselSlides">
             <!-- Slide 1: Producción -->
             <div class="slide">
-                <img src="img/imagenproquaris1.jpg" alt="Producción">
+                <img src="views/img/imagenproquaris1.jpg" alt="Producción">
                 <div class="slide-overlay">
                     <h2 class="slide-title">Gestión de Producción</h2>
                     <p class="slide-desc">Controla y optimiza tus líneas de producción.</p>
@@ -49,7 +49,7 @@
             </div>
             <!-- Slide 2: Calidad -->
             <div class="slide">
-                <img src="img/imagenproquaris2.jpg" alt="Calidad">
+                <img src="views/img/imagenproquaris2.jpg" alt="Calidad">
                 <div class="slide-overlay">
                     <h2 class="slide-title">Control de Calidad</h2>
                     <p class="slide-desc">Registra defectos y mejora la calidad.</p>
@@ -57,7 +57,7 @@
             </div>
             <!-- Slide 3: Inventario -->
             <div class="slide">
-                <img src="img/imagenproquaris3.jpg" alt="Inventario">
+                <img src="views/img/imagenproquaris3.jpg" alt="Inventario">
                 <div class="slide-overlay">
                     <h2 class="slide-title">Inventario Inteligente</h2>
                     <p class="slide-desc">Alertas de stock bajo y control de insumos.</p>
@@ -65,7 +65,7 @@
             </div>
             <!-- Slide 4: Reportes -->
             <div class="slide">
-                <img src="img/imagenproquaris4.jpg" alt="Reportes">
+                <img src="views/img/imagenproquaris4.jpg" alt="Reportes">
                 <div class="slide-overlay">
                     <h2 class="slide-title">Reportes y Dashboards</h2>
                     <p class="slide-desc">Visualiza indicadores clave.</p>
@@ -73,7 +73,7 @@
             </div>
             <!-- Slide 5: Análisis Predictivo -->
             <div class="slide">
-                <img src="img/imagenproquaris5.jpg" alt="Analítica">
+                <img src="views/img/imagenproquaris5.jpg" alt="Analítica">
                 <div class="slide-overlay">
                     <h2 class="slide-title">Análisis Predictivo</h2>
                     <p class="slide-desc">Predice fallos y emite alertas.</p>

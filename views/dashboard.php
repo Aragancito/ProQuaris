@@ -1,5 +1,11 @@
 <?php
-if (session_status() == PHP_SESSION_NONE) {
+// Encabezados HTTP estrictos para impedir caché en navegadores
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+header("Expires: Mon, 26 Jul 1997 05:00:00 GMT");
+
+if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
@@ -52,7 +58,7 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
             </a>
         </nav>
         <div style="padding:20px;">
-            <a href="../controllers/UsuarioController.php?logout=true" class="nav-item" style="color:#FF5252;">
+            <a href="logout.php" class="nav-item" style="color:#FF5252;">
                 <span class="nav-icon">🚪</span>
                 <span>Cerrar Sesión</span>
             </a>
@@ -131,6 +137,7 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
         </div>
     </main>
 </div>
+
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script>
@@ -156,6 +163,24 @@ $(document).ready(function() {
         pageLength: 10
     });
 });
+
+// Intercepta la carga desde el historial (Botón Atrás) y obliga a recargar contra el servidor PHP
+window.addEventListener('pageshow', function (event) {
+    var isBackNavigation = event.persisted || 
+        (window.performance && window.performance.navigation && window.performance.navigation.type === 2) ||
+        (window.performance && window.performance.getEntriesByType && window.performance.getEntriesByType("navigation")[0]?.type === "back_forward");
+        
+    if (isBackNavigation) {
+        window.location.reload(true);
+    }
+});
+</script>
+<script type="module">
+    import Chatbot from "https://cdn.jsdelivr.net/npm/flowise-embed/dist/web.js"
+    Chatbot.init({
+        chatflowid: "50de36ef-a39c-4cfa-a795-e95952c78ebe",
+        apiHost: "https://cloud.flowiseai.com",
+    })
 </script>
 </body>
 </html>

@@ -1,6 +1,8 @@
 <?php
-require_once '../models/UsuarioModel.php';
-session_start();
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/../models/UsuarioModel.php';
 
 class AuthService {
     private $usuarioModel;
@@ -11,8 +13,13 @@ class AuthService {
 
     public function login($correo, $contraseña) {
         $usuario = $this->usuarioModel->buscarPorCorreo($correo);
-        if ($usuario && password_verify($contraseña, $usuario['contraseña'])) {
-            return $usuario;
+        
+        if ($usuario) {
+            $hashAlmacenado = $usuario['contraseña'] ?? $usuario['password'] ?? '';
+            
+            if (password_verify($contraseña, $hashAlmacenado)) {
+                return $usuario;
+            }
         }
         return null;
     }
@@ -52,16 +59,16 @@ class UsuarioController {
     }
 
     private function login() {
-        $correo = $_POST['correo'] ?? '';
-        $contraseña = $_POST['contraseña'] ?? '';
+        $correo = trim($_POST['correo'] ?? $_POST['email'] ?? '');
+        $contraseña = $_POST['contraseña'] ?? $_POST['password'] ?? '';
         
         $usuario = $this->authService->login($correo, $contraseña);
 
         if ($usuario) {
-            $_SESSION['usuario_nombre'] = $usuario['nombre'] . " " . $usuario['apellido'];
-            $_SESSION['usuario_rol'] = $usuario['rol'];
+            $_SESSION['usuario_nombre'] = ($usuario['nombre'] ?? '') . " " . ($usuario['apellido'] ?? '');
+            $_SESSION['usuario_rol'] = $usuario['rol'] ?? 'Empleado';
             
-            if ($usuario['rol'] === 'Administrador') {
+            if (($_SESSION['usuario_rol']) === 'Administrador') {
                 header("Location: ../views/dashboard.php");
             } else {
                 header("Location: ../views/dashboard_empleado.php");
@@ -77,8 +84,8 @@ class UsuarioController {
         $datos = array(
             'nombre' => $_POST['nombre'] ?? '',
             'apellido' => $_POST['apellido'] ?? '',
-            'correo' => $_POST['correo'] ?? '',
-            'contraseña' => $_POST['contraseña'] ?? '',
+            'correo' => $_POST['correo'] ?? $_POST['email'] ?? '',
+            'contraseña' => $_POST['contraseña'] ?? $_POST['contrasena'] ?? $_POST['password'] ?? '',
             'rol' => $_POST['rol'] ?? 'Empleado'
         );
         
@@ -94,7 +101,7 @@ class UsuarioController {
 
     private function logout() {
         $this->authService->logout();
-        header("Location: ../views/index.php");
+        header("Location: ../index.php"); 
         exit();
     }
 }
