@@ -23,7 +23,8 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
     <meta charset="UTF-8">
     <title>Dashboard - ProQuaris</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/dashboard.css?v=<?php echo time(); ?>">
+    <!-- Ruta actualizada al archivo CSS global unificado -->
+    <link rel="stylesheet" href="css/estilos-globales.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
 </head>
@@ -71,7 +72,7 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
                 <h1>Panel de Control Principal</h1>
                 <p>Gestión general de métricas y lotes de planta</p>
             </div>
-            <a href="../controllers/OrdenController.php?accion=crear" class="btn btn-primary">+ Nueva Orden</a>
+            <a href="../controllers/OrdenController.php?accion=crear" class="btn-primary">+ Nueva Orden</a>
         </div>
 
         <div class="kpi-grid">
@@ -181,6 +182,8 @@ window.addEventListener('pageshow', function (event) {
         chatflowid: "50de36ef-a39c-4cfa-a795-e95952c78ebe",
         apiHost: "https://cloud.flowiseai.com",
     })
+</script>
+<script src="js/lote_admin.js">
 </script>
 </body>
 </html>

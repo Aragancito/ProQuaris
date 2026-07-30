@@ -7,7 +7,8 @@
     <meta charset="UTF-8">
     <title>Órdenes de Producción - ProQuaris</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../views/css/dashboard.css">
+    <!-- Ruta corregida al archivo CSS global unificado -->
+    <link rel="stylesheet" href="../views/css/estilos-globales.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
 
@@ -116,7 +117,7 @@
                 <h1>Órdenes de Producción</h1>
                 <p style="color: #64748B; font-size: 14px; margin-top: 4px;">Gestión general de las órdenes de planta</p>
             </div>
-            <a href="OrdenController.php?accion=crear" class="btn btn-primary" style="padding:10px 20px; background:#6366F1; color:white; border-radius:8px; text-decoration:none; font-weight:600;">+ Nueva Orden</a>
+            <a href="OrdenController.php?accion=crear" class="btn-primary" style="padding:10px 20px; background:#6366F1; color:white; border-radius:8px; text-decoration:none; font-weight:600;">+ Nueva Orden</a>
         </div>
         
         <div class="table-container" style="margin-top: 20px; padding: 20px; background: #0F172A; border-radius: 12px; border: 1px solid #1E293B;">

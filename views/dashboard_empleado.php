@@ -24,29 +24,41 @@ $rol = $_SESSION['usuario_rol'];
     <meta charset="UTF-8">
     <title>Panel Empleado - ProQuaris</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/ProQuaris/views/css/dashboard_empleado.css">
+    <!-- Vinculamos los estilos globales unificados -->
+    <link rel="stylesheet" href="css/estilos-globales.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
 </head>
 <body>
-    <div class="sidebar">
-        <div class="logo">ProQuaris</div>
-        <div class="user-info">
-            <div class="user-name"><?php echo htmlspecialchars($nombre); ?></div>
-            <div class="user-role"><?php echo htmlspecialchars($rol); ?></div>
-        </div>
-        <div class="nav-item active" data-page="panel"><span class="nav-icon">📊</span> Mi Panel</div>
-        <div class="nav-item" data-page="lotes"><span class="nav-icon">🏷️</span> Mis Lotes</div>
-        <div class="nav-item" data-page="defectos"><span class="nav-icon">🔍</span> Registrar Defecto</div>
-        <div class="nav-item" data-page="inspecciones"><span class="nav-icon">📋</span> Inspecciones</div>
-        
-        <a href="logout.php" class="nav-item logout-btn">
-            <span class="nav-icon">🚪</span> Cerrar Sesión
-        </a>
+    <div class="dashboard-container">
+        <!-- Sidebar adaptado a la estructura global -->
+        <aside class="sidebar">
+            <div>
+                <div class="sidebar-header">
+                    <div class="logo">ProQuaris</div>
+                </div>
+                <div class="user-info">
+                    <div class="user-name"><?php echo htmlspecialchars($nombre); ?></div>
+                    <div class="user-role"><?php echo htmlspecialchars($rol); ?></div>
+                </div>
+                <div class="nav-menu">
+                    <div class="nav-item active" data-page="panel"><span class="nav-icon">📊</span> Mi Panel</div>
+                    <div class="nav-item" data-page="lotes"><span class="nav-icon">🏷️</span> Mis Lotes</div>
+                    <div class="nav-item" data-page="defectos"><span class="nav-icon">🔍</span> Registrar Defecto</div>
+                    <div class="nav-item" data-page="inspecciones"><span class="nav-icon">📋</span> Inspecciones</div>
+                </div>
+            </div>
+            <div style="padding: 16px 12px;">
+                <a href="logout.php" class="nav-item" style="color: var(--color-alerta);">
+                    <span class="nav-icon">🚪</span> Cerrar Sesión
+                </a>
+            </div>
+        </aside>
+
+        <div class="main-content" id="main-content">Cargando...</div>
     </div>
 
-    <div class="main-content" id="main-content">Cargando...</div>
-
+    <!-- Modales -->
     <div id="modalDefecto" class="modal">
         <div class="modal-content">
             <h3>Registrar Defecto</h3>
@@ -78,65 +90,15 @@ $rol = $_SESSION['usuario_rol'];
         </div>
     </div>
 
-    <script>
-        function cargarPanel() {
-            fetch('empleado_api.php?action=panel')
-                .then(r => r.json())
-                .then(d => {
-                    document.getElementById('main-content').innerHTML = `
-                        <h1>Mi Panel de Control</h1>
-                        <div class="kpi-grid">
-                            <div class="kpi-card"><div class="kpi-title">Lotes asignados</div><div class="kpi-value">${d.lotes_asignados}</div></div>
-                            <div class="kpi-card"><div class="kpi-title">Defectos registrados</div><div class="kpi-value">${d.defectos_registrados}</div></div>
-                            <div class="kpi-card"><div class="kpi-title">Tareas pendientes</div><div class="kpi-value">${d.tareas_pendientes}</div></div>
-                        </div>
-                        <div class="table-container">
-                            <table id="tablaLotesEmpleado" class="display">
-                                <thead>
-                                    <tr><th>Código</th><th>Producto</th><th>Cantidad</th><th>Estado</th><th>Acción</th></tr>
-                                </thead>
-                                <tbody>
-                                    ${d.lotes_recientes.map(l => `
-                                        <tr>
-                                            <td>${l.codigo}</td>
-                                            <td>${l.producto}</td>
-                                            <td>${l.cantidad}</td>
-                                            <td><span class="badge ${l.estado === 'completado' ? 'badge-success' : 'badge-warning'}">${l.estado}</span></td>
-                                            <td><button class="btn-outline" onclick="verDetalleLote(${l.id})">Ver detalle</button></td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                        <button class="btn-primary" onclick="abrirModalDefecto()">+ Registrar defecto</button>
-                    `;
-                    if (typeof $.fn.DataTable !== 'undefined') { $('#tablaLotesEmpleado').DataTable({ responsive: true }); }
-                });
-        }
-        function verDetalleLote(id) {
-            fetch('empleado_api.php?action=detalle_lote&id=' + id).then(r => r.json()).then(d => {
-                document.getElementById('detalleLote').innerHTML = `<p>ID: ${d.id}</p><p>Código: ${d.codigo}</p><p>Estado: ${d.estado}</p>`;
-                document.getElementById('modalDetalle').style.display = 'flex';
-            });
-        }
-        function abrirModalDefecto() { document.getElementById('modalDefecto').style.display = 'flex'; }
-        function cerrarModal() { document.getElementById('modalDefecto').style.display = 'none'; document.getElementById('formDefecto').reset(); }
-        function cerrarModalDetalle() { document.getElementById('modalDetalle').style.display = 'none'; }
-        
-        document.querySelectorAll('.nav-item[data-page]').forEach(el => {
-            el.addEventListener('click', () => {
-                document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-                el.classList.add('active');
-                if (el.dataset.page === 'panel') cargarPanel();
-            });
-        });
-
-        cargarPanel();
-    </script>
+    <!-- Librerías JS Externas -->
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+    <!-- Tu script modular en la carpeta js/ -->
+    <script src="js/empleado.js"></script>
+
+    <!-- Script de seguridad para evitar caché en botón atrás -->
     <script>
-    // Intercepta la carga desde el historial (Botón Atrás) y obliga a recargar contra el servidor PHP
     window.addEventListener('pageshow', function (event) {
         var isBackNavigation = event.persisted || 
             (window.performance && window.performance.navigation && window.performance.navigation.type === 2) ||
@@ -147,12 +109,14 @@ $rol = $_SESSION['usuario_rol'];
         }
     });
     </script>
+
+    <!-- Chatbot Flowise -->
     <script type="module">
-    import Chatbot from "https://cdn.jsdelivr.net/npm/flowise-embed/dist/web.js"
-    Chatbot.init({
-        chatflowid: "50de36ef-a39c-4cfa-a795-e95952c78ebe",
-        apiHost: "https://cloud.flowiseai.com",
-    })
-</script>
+        import Chatbot from "https://cdn.jsdelivr.net/npm/flowise-embed/dist/web.js"
+        Chatbot.init({
+            chatflowid: "50de36ef-a39c-4cfa-a795-e95952c78ebe",
+            apiHost: "https://cloud.flowiseai.com",
+        })
+    </script>
 </body>
 </html>
