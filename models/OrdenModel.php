@@ -26,12 +26,15 @@ class OrdenModel {
         $sql = "INSERT INTO ordenproduccion (cantidadPlanificada, fechaInicio, producto, estado) 
                 VALUES (?, ?, ?, ?)";
         $stmt = $this->db->prepare($sql);
-        return $stmt->execute([
+        $stmt->execute([
             $datos['cantidadPlanificada'],
             $datos['fechaInicio'],
             $datos['producto'],
             $datos['estado']
         ]);
+        
+        // Retorna el ID de la orden recién insertada para permitir la vinculación automática del lote
+        return $this->db->lastInsertId();
     }
 
     public function actualizar($id, $datos) {

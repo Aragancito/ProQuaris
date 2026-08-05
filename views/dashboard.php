@@ -1,5 +1,4 @@
 <?php
-// Encabezados HTTP estrictos para impedir caché en navegadores
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
@@ -23,8 +22,7 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
     <meta charset="UTF-8">
     <title>Dashboard - ProQuaris</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Ruta actualizada al archivo CSS global unificado -->
-    <link rel="stylesheet" href="css/estilos-globales.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="/ProQuaris/views/css/estilos-globales.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
 </head>
@@ -37,15 +35,15 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
             <div class="user-role"><?php echo htmlspecialchars($rolUsuario); ?></div>
         </div>
         <nav class="nav-menu">
-            <a href="dashboard.php" class="nav-item active">
+            <a href="/ProQuaris/views/dashboard.php" class="nav-item active">
                 <span class="nav-icon">📊</span>
                 <span>Inicio (Resumen)</span>
             </a>
-            <a href="../controllers/OrdenController.php?accion=listar" class="nav-item">
+            <a href="/ProQuaris/controllers/OrdenController.php?accion=listar" class="nav-item">
                 <span class="nav-icon">📋</span>
                 <span>Órdenes de Producción</span>
             </a>
-            <a href="#" class="nav-item">
+            <a href="/ProQuaris/controllers/ProduccionController.php?accion=listar" class="nav-item">
                 <span class="nav-icon">🏷️</span>
                 <span>Lotes y Calidad</span>
             </a>
@@ -59,7 +57,7 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
             </a>
         </nav>
         <div style="padding:20px;">
-            <a href="logout.php" class="nav-item" style="color:#FF5252;">
+            <a href="/ProQuaris/views/logout.php" class="nav-item" style="color:#FF5252;">
                 <span class="nav-icon">🚪</span>
                 <span>Cerrar Sesión</span>
             </a>
@@ -72,7 +70,7 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
                 <h1>Panel de Control Principal</h1>
                 <p>Gestión general de métricas y lotes de planta</p>
             </div>
-            <a href="../controllers/OrdenController.php?accion=crear" class="btn-primary">+ Nueva Orden</a>
+            <a href="/ProQuaris/controllers/OrdenController.php?accion=crear" class="btn-primary">+ Nueva Orden</a>
         </div>
 
         <div class="kpi-grid">
@@ -165,7 +163,6 @@ $(document).ready(function() {
     });
 });
 
-// Intercepta la carga desde el historial (Botón Atrás) y obliga a recargar contra el servidor PHP
 window.addEventListener('pageshow', function (event) {
     var isBackNavigation = event.persisted || 
         (window.performance && window.performance.navigation && window.performance.navigation.type === 2) ||
@@ -183,7 +180,6 @@ window.addEventListener('pageshow', function (event) {
         apiHost: "https://cloud.flowiseai.com",
     })
 </script>
-<script src="js/lote_admin.js">
-</script>
+<script src="/ProQuaris/views/js/lote_admin.js"></script>
 </body>
 </html>

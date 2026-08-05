@@ -7,48 +7,50 @@ require_once "../config/conexion.php";
 // ==========================================
 // MODELO DE PRODUCCIÓN (CAPA DE DATOS)
 // ==========================================
-// ABSTRACCIÓN: Esta clase abstrae todas las operaciones de base de datos
-// relacionadas con lotes de producción. El controlador solo llama
-// a registrarLote() sin conocer los detalles SQL.
 class ProduccionModel {
     
-    // ==========================================
-    // ENCAPSULAMIENTO
-    // ==========================================
-    // El atributo $db es privado, protegiendo la conexión a la base de datos.
     private $db;
 
-    // ==========================================
-    // CONSTRUCTOR
-    // ==========================================
-    // ABSTRACCIÓN: La conexión se obtiene mediante un método estático
-    // que oculta la configuración PDO.
     public function __construct() {
         $this->db = Conexion::conectar();
     }
 
     // ==========================================
-    // REGISTRO DE LOTE DE PRODUCCIÓN
+    // REGISTRO DE LOTE VINCULADO A UNA ORDEN
     // ==========================================
-    // ABSTRACCIÓN: Este método oculta toda la lógica de inserción SQL.
-    // El controlador solo pasa los datos y recibe un booleano.
-    public function registrarLote($datos) {
+    public function registrarLoteDesdeOrden($fk_ordenId, $cantidad, $estado) {
         try {
-            // POLIMORFISMO: Los marcadores nombrados (:param) permiten que
-            // la consulta se adapte a diferentes estructuras de datos.
-            $query = "INSERT INTO Produccion (id_lote, producto, cantidad, estado) 
-                      VALUES (:id, :producto, :cantidad, :estado)";
+            // Usamos los nombres exactos de columnas de tu base de datos (tabla 'lote')
+            $query = "INSERT INTO lote (FK_ordenId, cantidad, fechaCreacion, estado) 
+                      VALUES (:fk_ordenId, :cantidad, CURDATE(), :estado)";
+            
             $stmt = $this->db->prepare($query);
             
-            // POLIMORFISMO: execute() recibe un array asociativo y se adapta
-            // a los marcadores de la consulta sin necesidad de bindParam().
-            // Los nombres de las claves deben coincidir con los marcadores.
-            $stmt->execute($datos);
+            $stmt->execute([
+                ':fk_ordenId' => $fk_ordenId,
+                ':cantidad' => $cantidad,
+                ':estado' => $estado
+            ]);
+            
             return true;
         } catch (PDOException $e) {
-            // ABSTRACCIÓN: El error se muestra pero los detalles internos
-            // de la base de datos están ocultos en el mensaje.
             die("Error en ProduccionModel: " . $e->getMessage());
+        }
+    }
+
+    // ==========================================
+    // LISTAR LOTES (Para la nueva pestaña de Lotes)
+    // ==========================================
+    public function obtenerLotes() {
+        try {
+            $query = "SELECT l.idLote, o.producto, l.cantidad, l.fechaCreacion, l.estado 
+                      FROM lote l 
+                      JOIN ordenproduccion o ON l.FK_ordenId = o.idOrden";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            die("Error al obtener lotes: " . $e->getMessage());
         }
     }
 }

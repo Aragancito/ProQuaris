@@ -1,11 +1,19 @@
 <?php
 // Se incluye desde OrdenController.php
-// Si viene la variable $orden, significa que estamos EDITANDO; de lo contrario, CREANDO.
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+if (!isset($_SESSION['usuario_nombre'])) {
+    header("Location: /ProQuaris/views/login.php");
+    exit();
+}
+
 $esEdicion = isset($orden) && !empty($orden);
 $titulo = $esEdicion ? "Editar Orden de Producción" : "Nueva Orden de Producción";
 $action = $esEdicion 
-    ? "OrdenController.php?accion=editar&id=" . ($orden['idOrden'] ?? 0) 
-    : "OrdenController.php?accion=crear";
+    ? "/ProQuaris/controllers/OrdenController.php?accion=editar&id=" . ($orden['idOrden'] ?? 0) 
+    : "/ProQuaris/controllers/OrdenController.php?accion=crear";
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -14,8 +22,7 @@ $action = $esEdicion
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $titulo; ?> - ProQuaris</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Ruta corregida al archivo CSS global unificado -->
-    <link rel="stylesheet" href="../views/css/estilos-globales.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="/ProQuaris/views/css/estilos-globales.css?v=<?php echo time(); ?>">
 </head>
 <body>
 <div class="dashboard-container">
@@ -27,15 +34,15 @@ $action = $esEdicion
             <div class="user-role"><?php echo htmlspecialchars($_SESSION['usuario_rol'] ?? 'Administrador'); ?></div>
         </div>
         <nav class="nav-menu">
-            <a href="../views/dashboard.php" class="nav-item">
+            <a href="/ProQuaris/views/dashboard.php" class="nav-item">
                 <span class="nav-icon">📊</span>
                 <span>Inicio (Resumen)</span>
             </a>
-            <a href="OrdenController.php?accion=listar" class="nav-item active">
+            <a href="/ProQuaris/controllers/OrdenController.php?accion=listar" class="nav-item active">
                 <span class="nav-icon">📋</span>
                 <span>Órdenes de Producción</span>
             </a>
-            <a href="#" class="nav-item">
+            <a href="/ProQuaris/controllers/ProduccionController.php?accion=listar" class="nav-item">
                 <span class="nav-icon">🏷️</span>
                 <span>Lotes y Calidad</span>
             </a>
@@ -49,7 +56,7 @@ $action = $esEdicion
             </a>
         </nav>
         <div style="padding:20px;">
-            <a href="UsuarioController.php?logout=true" class="nav-item" style="color:#FF5252;">
+            <a href="/ProQuaris/views/logout.php" class="nav-item" style="color:#FF5252;">
                 <span class="nav-icon">🚪</span>
                 <span>Cerrar Sesión</span>
             </a>
@@ -63,7 +70,7 @@ $action = $esEdicion
                 <h1><?php echo $titulo; ?></h1>
                 <p>Diligencie los campos para gestionar la orden de producción</p>
             </div>
-            <a href="OrdenController.php?accion=listar" style="padding:10px 20px; background:#475569; color:white; border-radius:8px; text-decoration:none; font-weight:500;">← Volver al listado</a>
+            <a href="/ProQuaris/controllers/OrdenController.php?accion=listar" style="padding:10px 20px; background:#475569; color:white; border-radius:8px; text-decoration:none; font-weight:500;">← Volver al listado</a>
         </div>
 
         <div class="table-container" style="max-width: 550px; padding: 25px; margin-top: 20px;">

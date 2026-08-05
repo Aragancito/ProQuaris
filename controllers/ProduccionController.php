@@ -1,5 +1,17 @@
 <?php
-require_once "../models/ProduccionModel.php";
+// ==========================================
+// CONTROLADOR DE PRODUCCIÓN Y LOTES
+// ==========================================
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+if (!isset($_SESSION['usuario_nombre'])) {
+    header("Location: /ProQuaris/views/login.php");
+    exit();
+}
+
+require_once __DIR__ . '/../models/ProduccionModel.php';
 
 class ProduccionController {
     private $model;
@@ -8,18 +20,28 @@ class ProduccionController {
         $this->model = new ProduccionModel();
     }
 
-    public function gestionarProduccion() {
-        if ($_SERVER["REQUEST_METHOD"] == "POST") {
-            $datos = [
-                'id' => uniqid(),
-                'producto' => $_POST['producto'],
-                'cantidad' => $_POST['cantidad'],
-                'estado' => 'En Proceso'
-            ];
-            
-            if ($this->model->registrarLote($datos)) {
-                echo "<script>alert('Lote registrado'); window.location.href='../views/produccion.php';</script>";
-            }
+    public function procesarAccion() {
+        $accion = $_GET['accion'] ?? 'listar';
+
+        switch ($accion) {
+            case 'listar':
+                $this->listar();
+                break;
+            default:
+                $this->listar();
+                break;
         }
     }
+
+    public function listar() {
+        // Obtenemos los lotes reales desde la base de datos a través del modelo
+        $lotes = $this->model->obtenerLotes();
+        
+        // Cargamos la vista de lotes usando ruta absoluta basada en __DIR__
+        require_once __DIR__ . '/../views/lotes.php';
+    }
 }
+
+$controller = new ProduccionController();
+$controller->procesarAccion();
+?>

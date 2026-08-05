@@ -1,5 +1,15 @@
 <?php
-// Este archivo se incluye desde OrdenController.php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+if (!isset($_SESSION['usuario_nombre'])) {
+    header("Location: /ProQuaris/views/login.php");
+    exit();
+}
+
+$nombreUsuario = $_SESSION['usuario_nombre'] ?? 'Usuario';
+$rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -7,14 +17,11 @@
     <meta charset="UTF-8">
     <title>Órdenes de Producción - ProQuaris</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Ruta corregida al archivo CSS global unificado -->
-    <link rel="stylesheet" href="../views/css/estilos-globales.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="/ProQuaris/views/css/estilos-globales.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
 
-    <!-- Estilos de refinamiento visual para DataTables -->
     <style>
-        /* Ajuste fino del buscador de DataTables */
         .dataTables_wrapper .dataTables_filter input {
             background-color: #0F172A !important;
             border: 1px solid #334155 !important;
@@ -27,8 +34,6 @@
             color: #94A3B8 !important;
             font-weight: 500;
         }
-
-        /* Estilo de la tabla */
         table.dataTable tbody tr {
             background-color: transparent !important;
             border-bottom: 1px solid #1E293B !important;
@@ -44,8 +49,6 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-
-        /* Botones de acción SVG */
         .btn-action {
             display: inline-flex;
             align-items: center;
@@ -61,8 +64,6 @@
         .btn-edit:hover { background: #6366F1; color: #FFF; }
         .btn-delete { background: rgba(239, 68, 68, 0.15); color: #F87171; }
         .btn-delete:hover { background: #EF4444; color: #FFF; }
-
-        /* Paginación */
         .dataTables_wrapper .dataTables_paginate .paginate_button {
             color: #94A3B8 !important;
             border-radius: 6px !important;
@@ -79,19 +80,19 @@
     <aside class="sidebar">
         <div class="sidebar-header"><div class="logo">ProQuaris</div></div>
         <div class="user-info">
-            <div class="user-name"><?php echo htmlspecialchars($_SESSION['usuario_nombre'] ?? 'Usuario'); ?></div>
-            <div class="user-role"><?php echo htmlspecialchars($_SESSION['usuario_rol'] ?? 'Administrador'); ?></div>
+            <div class="user-name"><?php echo htmlspecialchars($nombreUsuario); ?></div>
+            <div class="user-role"><?php echo htmlspecialchars($rolUsuario); ?></div>
         </div>
         <nav class="nav-menu">
-            <a href="../views/dashboard.php" class="nav-item">
+            <a href="/ProQuaris/views/dashboard.php" class="nav-item">
                 <span class="nav-icon">📊</span>
                 <span>Inicio (Resumen)</span>
             </a>
-            <a href="OrdenController.php?accion=listar" class="nav-item active">
+            <a href="/ProQuaris/controllers/OrdenController.php?accion=listar" class="nav-item active">
                 <span class="nav-icon">📋</span>
                 <span>Órdenes de Producción</span>
             </a>
-            <a href="#" class="nav-item">
+            <a href="/ProQuaris/controllers/ProduccionController.php?accion=listar" class="nav-item">
                 <span class="nav-icon">🏷️</span>
                 <span>Lotes y Calidad</span>
             </a>
@@ -105,19 +106,20 @@
             </a>
         </nav>
         <div style="padding:20px;">
-            <a href="UsuarioController.php?logout=true" class="nav-item" style="color:#FF5252;">
+            <a href="/ProQuaris/views/logout.php" class="nav-item" style="color:#FF5252;">
                 <span class="nav-icon">🚪</span>
                 <span>Cerrar Sesión</span>
             </a>
         </div>
     </aside>
+
     <main class="main-content">
         <div class="top-bar">
             <div class="page-title">
                 <h1>Órdenes de Producción</h1>
                 <p style="color: #64748B; font-size: 14px; margin-top: 4px;">Gestión general de las órdenes de planta</p>
             </div>
-            <a href="OrdenController.php?accion=crear" class="btn-primary" style="padding:10px 20px; background:#6366F1; color:white; border-radius:8px; text-decoration:none; font-weight:600;">+ Nueva Orden</a>
+            <a href="/ProQuaris/controllers/OrdenController.php?accion=crear" class="btn-primary" style="padding:10px 20px; background:#6366F1; color:white; border-radius:8px; text-decoration:none; font-weight:600;">+ Nueva Orden</a>
         </div>
         
         <div class="table-container" style="margin-top: 20px; padding: 20px; background: #0F172A; border-radius: 12px; border: 1px solid #1E293B;">
@@ -136,22 +138,24 @@
                     <?php if (!empty($ordenes)): ?>
                         <?php foreach ($ordenes as $o): ?>
                         <tr>
-                            <td><strong>#<?php echo htmlspecialchars($o['idOrden']); ?></strong></td>
-                            <td style="font-weight: 500; color: #F8FAFC;"><?php echo htmlspecialchars($o['producto']); ?></td>
-                            <td><?php echo htmlspecialchars($o['cantidadPlanificada']); ?> uds</td>
-                            <td><?php echo htmlspecialchars($o['fechaInicio']); ?></td>
+                            <td><strong>#<?php echo htmlspecialchars($o['idOrden'] ?? ''); ?></strong></td>
+                            <td style="font-weight: 500; color: #F8FAFC;"><?php echo htmlspecialchars($o['producto'] ?? ''); ?></td>
+                            <td><?php echo htmlspecialchars($o['cantidadPlanificada'] ?? ''); ?> uds</td>
+                            <td><?php echo htmlspecialchars($o['fechaInicio'] ?? ''); ?></td>
                             <td>
-                                <span class="badge <?php echo ($o['estado'] === 'Activa' || $o['estado'] === 'En Proceso') ? 'badge-success' : 'badge-danger'; ?>">
-                                    <?php echo htmlspecialchars($o['estado']); ?>
+                                <?php 
+                                    $estado = $o['estado'] ?? 'Pendiente';
+                                    $badgeClass = ($estado === 'Activa' || $estado === 'En Proceso') ? 'badge-success' : 'badge-danger';
+                                ?>
+                                <span class="badge <?php echo $badgeClass; ?>">
+                                    <?php echo htmlspecialchars($estado); ?>
                                 </span>
                             </td>
                             <td style="text-align: center;">
-                                <!-- Botón Editar (Icono SVG) -->
-                                <a href="OrdenController.php?accion=editar&id=<?php echo $o['idOrden']; ?>" class="btn-action btn-edit" title="Editar orden">
+                                <a href="/ProQuaris/controllers/OrdenController.php?accion=editar&id=<?php echo $o['idOrden'] ?? ''; ?>" class="btn-action btn-edit" title="Editar orden">
                                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                 </a>
-                                <!-- Botón Eliminar (Icono SVG) -->
-                                <a href="OrdenController.php?accion=eliminar&id=<?php echo $o['idOrden']; ?>" class="btn-action btn-delete" onclick="return confirm('¿Eliminar esta orden?')" title="Eliminar orden">
+                                <a href="/ProQuaris/controllers/OrdenController.php?accion=eliminar&id=<?php echo $o['idOrden'] ?? ''; ?>" class="btn-action btn-delete" onclick="return confirm('¿Eliminar esta orden?')" title="Eliminar orden">
                                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                 </a>
                             </td>
@@ -163,6 +167,7 @@
         </div>
     </main>
 </div>
+
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
