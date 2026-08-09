@@ -1,57 +1,35 @@
 <?php
-// ==========================================
-// CARGA DE DEPENDENCIAS
-// ==========================================
 require_once "../config/conexion.php";
 
-// ==========================================
-// MODELO DE CALIDAD (CAPA DE DATOS)
-// ==========================================
-// ABSTRACCIÓN: Esta clase abstrae todas las operaciones de base de datos
-// relacionadas con inspecciones de calidad. El controlador solo llama
-// a registrarInspeccion() sin conocer los detalles SQL.
 class CalidadModel {
-    
-    // ==========================================
-    // ENCAPSULAMIENTO
-    // ==========================================
-    // El atributo $db es privado, protegiendo la conexión a la base de datos.
     private $db;
 
-    // ==========================================
-    // CONSTRUCTOR
-    // ==========================================
-    // ABSTRACCIÓN: La conexión se obtiene mediante un método estático
-    // que oculta la configuración PDO.
     public function __construct() {
         $this->db = Conexion::conectar();
     }
 
-    // ==========================================
-    // REGISTRO DE INSPECCIÓN DE CALIDAD
-    // ==========================================
-    // ABSTRACCIÓN: Este método oculta toda la lógica de inserción SQL.
-    // El controlador solo pasa los datos y recibe un booleano.
-    public function registrarInspeccion($datos) {
+    public function guardarInspeccion($idLote, $resultado, $motivo, $observaciones, $inspectorId) {
         try {
-            // POLIMORFISMO: Los marcadores nombrados (:param) permiten que
-            // la consulta se adapte a diferentes estructuras de datos.
-            $query = "INSERT INTO Calidad (id_inspeccion, FK_usuario_id, resultado, fecha) 
-                      VALUES (:id, :usuario_id, :resultado, :fecha)";
+            // Combinamos el motivo seleccionado con las observaciones
+            $observacionesCompletas = "Motivo: " . $motivo . " - Detalle: " . $observaciones;
+
+            $query = "INSERT INTO registroinspeccion (FK_loteId, FK_inspectorId, fecha, resultado, observaciones) 
+                      VALUES (:loteId, :inspector, CURDATE(), :resultado, :obs)";
             $stmt = $this->db->prepare($query);
+            $stmt->execute([
+                ':loteId' => $idLote,
+                ':inspector' => $inspectorId,
+                ':resultado' => $resultado,
+                ':obs' => $observacionesCompletas
+            ]);
             
-            // POLIMORFISMO: bindParam() se adapta a diferentes tipos de datos
-            // según la variable que recibe (string, int, date).
-            $stmt->bindParam(":id", $datos['id']);
-            $stmt->bindParam(":usuario_id", $datos['usuario_id']);
-            $stmt->bindParam(":resultado", $datos['resultado']);
-            $stmt->bindParam(":fecha", $datos['fecha']);
+            // Actualizamos el estado del lote principal
+            $upd = $this->db->prepare("UPDATE lote SET estado = :estado WHERE idLote = :loteId");
+            $upd->execute([':estado' => $resultado, ':loteId' => $idLote]);
             
-            return $stmt->execute();
+            return true;
         } catch (PDOException $e) {
-            // ABSTRACCIÓN: El error se muestra pero los detalles internos
-            // de la base de datos están ocultos en el mensaje.
-            die("Error en CalidadModel: " . $e->getMessage());
+            die("Error al guardar inspección: " . $e->getMessage());
         }
     }
 }

@@ -56,16 +56,17 @@ if (!$idLote) {
         <div class="top-bar">
             <div class="page-title">
                 <h1>Registrar Inspección</h1>
-                <p>Control de calidad para el Lote #<?php echo htmlspecialchars($idLote); ?></p>
+                <p>Evaluación de calidad para el Lote #<?php echo htmlspecialchars($idLote); ?></p>
             </div>
+            <a href="/ProQuaris/controllers/ProduccionController.php?accion=listar" class="btn-primary" style="background: transparent; border: 1px solid var(--color-borde-claro);">← Volver al listado</a>
         </div>
         
-        <div class="table-container" style="max-width: 600px; margin: 0 auto;">
+        <div class="form-card" style="background: var(--color-superficie); border: 1px solid var(--color-borde); border-radius: 12px; padding: 30px; max-width: 600px;">
             <form action="/ProQuaris/controllers/CalidadController.php?accion=guardar" method="POST">
                 <input type="hidden" name="idLote" value="<?php echo htmlspecialchars($idLote); ?>">
 
                 <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 8px; color: var(--color-texto-mutado); font-weight: 500;">Resultado de Calidad</label>
+                    <label style="display: block; margin-bottom: 8px; color: var(--color-texto-mutado); font-weight: 500;">Resultado de Calidad:</label>
                     <select name="resultado" required style="width: 100%; padding: 12px; border-radius: 8px; background: var(--color-fondo); border: 1px solid var(--color-borde-claro); color: white;">
                         <option value="Aprobado">Aprobado</option>
                         <option value="Rechazado">Rechazado</option>
@@ -73,7 +74,7 @@ if (!$idLote) {
                 </div>
 
                 <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 8px; color: var(--color-texto-mutado); font-weight: 500;">Motivo / Criterio</label>
+                    <label style="display: block; margin-bottom: 8px; color: var(--color-texto-mutado); font-weight: 500;">Motivo / Criterio de Inspección:</label>
                     <select name="motivo" required style="width: 100%; padding: 12px; border-radius: 8px; background: var(--color-fondo); border: 1px solid var(--color-borde-claro); color: white;">
                         <option value="Cumple especificaciones estándar">Cumple especificaciones estándar</option>
                         <option value="Material defectuoso o dañado">Material defectuoso o dañado</option>
@@ -83,15 +84,12 @@ if (!$idLote) {
                     </select>
                 </div>
 
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 8px; color: var(--color-texto-mutado); font-weight: 500;">Observaciones Adicionales</label>
-                    <textarea name="observaciones" placeholder="Detalles de la inspección..." style="width: 100%; height: 100px; padding: 12px; border-radius: 8px; background: var(--color-fondo); border: 1px solid var(--color-borde-claro); color: white; resize: none;"></textarea>
+                <div style="margin-bottom: 25px;">
+                    <label style="display: block; margin-bottom: 8px; color: var(--color-texto-mutado); font-weight: 500;">Observaciones:</label>
+                    <textarea name="observaciones" placeholder="Ingrese detalles adicionales..." style="width: 100%; height: 100px; padding: 12px; border-radius: 8px; background: var(--color-fondo); border: 1px solid var(--color-borde-claro); color: white; resize: none;"></textarea>
                 </div>
 
-                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 30px;">
-                    <a href="/ProQuaris/controllers/ProduccionController.php?accion=listar" style="padding: 10px 20px; background: transparent; border: 1px solid var(--color-borde-claro); color: white; border-radius: 8px; text-decoration: none;">Cancelar</a>
-                    <button type="submit" class="btn-primary">Guardar Inspección</button>
-                </div>
+                <button type="submit" class="btn-primary" style="width: 100%; padding: 12px; cursor: pointer;">Guardar Inspección</button>
             </form>
         </div>
     </main>

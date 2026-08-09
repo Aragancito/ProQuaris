@@ -100,14 +100,20 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
                                 <td>
                                     <?php 
                                         $calidad = $lote['resultadoCalidad'] ?? 'Sin inspección';
-                                        $calidadClass = ($calidad === 'Aprobado' || $calidad === 'Aceptado') ? 'badge-success' : (($calidad === 'Rechazado') ? 'badge-danger' : 'badge-warning');
+                                        $calidadClass = ($calidad === 'Aprobado') ? 'badge-success' : (($calidad === 'Rechazado') ? 'badge-danger' : 'badge-warning');
                                     ?>
                                     <span class="badge <?php echo $calidadClass; ?>"><?php echo htmlspecialchars($calidad); ?></span>
                                 </td>
                                 <td style="text-align: right;">
+                                    <!-- Botón Inspeccionar (Nuevo) -->
+                                    <a href="/ProQuaris/controllers/CalidadController.php?accion=registrar&idLote=<?php echo $lote['idLote']; ?>" class="btn-action" title="Registrar Inspección" style="color: #4CAF50; margin-right: 8px;">
+                                        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    </a>
+                                    <!-- Botón Editar -->
                                     <a href="/ProQuaris/controllers/ProduccionController.php?accion=editar&id=<?php echo $lote['idLote']; ?>" class="btn-action btn-edit" title="Editar">
                                         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                     </a>
+                                    <!-- Botón Eliminar -->
                                     <a href="/ProQuaris/controllers/ProduccionController.php?accion=eliminar&id=<?php echo $lote['idLote']; ?>" class="btn-action btn-delete" onclick="return confirm('¿Estás seguro de eliminar este lote?')" title="Eliminar">
                                         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                     </a>
