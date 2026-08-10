@@ -6,10 +6,10 @@ if (!isset($_SESSION['usuario_nombre']) || $_SESSION['usuario_rol'] !== 'Adminis
 }
 
 require_once '../models/OrdenModel.php';
-require_once '../models/ProduccionModel.php'; // 1. Importamos el modelo de producción
+require_once '../models/ProduccionModel.php';
 
 $model = new OrdenModel();
-$prodModel = new ProduccionModel(); // 2. Instanciamos el modelo de producción
+$prodModel = new ProduccionModel(); 
 $accion = $_GET['accion'] ?? 'listar';
 
 switch ($accion) {
@@ -26,19 +26,10 @@ switch ($accion) {
                 'producto' => $_POST['producto'],
                 'estado' => $_POST['estado']
             ];
-            
-            // 3. Creamos la orden y capturamos el ID insertado
             $idOrdenGenerada = $model->crear($datos);
-
-            // 4. Si la orden se creó correctamente y tenemos un ID válido, registramos el lote automático
             if ($idOrdenGenerada) {
-                $prodModel->registrarLoteDesdeOrden(
-                    $idOrdenGenerada, 
-                    $_POST['cantidadPlanificada'], 
-                    $_POST['estado']
-                );
+                $prodModel->registrarLote($idOrdenGenerada, $_POST['cantidadPlanificada'], $_POST['estado']);
             }
-
             header("Location: OrdenController.php?accion=listar");
             exit();
         }
@@ -55,6 +46,7 @@ switch ($accion) {
                 'estado' => $_POST['estado']
             ];
             $model->actualizar($id, $datos);
+            $prodModel->actualizarEstadoPorOrden($id, $_POST['estado']);
             header("Location: OrdenController.php?accion=listar");
             exit();
         }

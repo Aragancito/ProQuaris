@@ -89,7 +89,10 @@ if (!$idLote) {
                     <textarea name="observaciones" placeholder="Ingrese detalles adicionales..." style="width: 100%; height: 100px; padding: 12px; border-radius: 8px; background: var(--color-fondo); border: 1px solid var(--color-borde-claro); color: white; resize: none;"></textarea>
                 </div>
 
-                <button type="submit" class="btn-primary" style="width: 100%; padding: 12px; cursor: pointer;">Guardar Inspección</button>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <a href="/ProQuaris/controllers/ProduccionController.php?accion=listar" style="padding: 12px 20px; background: transparent; border: 1px solid var(--color-borde-claro); color: white; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center;">Cancelar</a>
+                    <button type="submit" class="btn-primary" style="padding: 12px 20px; cursor: pointer;">Guardar Inspección</button>
+                </div>
             </form>
         </div>
     </main>

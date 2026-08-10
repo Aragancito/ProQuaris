@@ -10,71 +10,53 @@ class ProduccionModel {
 
     public function obtenerLotes() {
         try {
-            $query = "SELECT l.idLote, o.producto, l.cantidad, l.fechaCreacion, l.estado, 
-                             COALESCE(r.resultado, 'Sin inspección') AS resultadoCalidad 
+            $query = "SELECT l.idLote, l.FK_ordenId, o.producto, l.cantidad, l.fechaCreacion, l.estado, 
+                             (SELECT r.resultado FROM registroinspeccion r 
+                              WHERE r.FK_loteId = l.idLote 
+                              ORDER BY r.fecha DESC LIMIT 1) AS resultadoCalidad 
                       FROM lote l 
-                      JOIN ordenproduccion o ON l.FK_ordenId = o.idOrden
-                      LEFT JOIN registroinspeccion r ON l.idLote = r.FK_loteId";
-            $stmt = $this->db->prepare($query);
-            $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            die("Error al obtener lotes: " . $e->getMessage());
+                      JOIN ordenproduccion o ON l.FK_ordenId = o.idOrden";
+            return $this->db->query($query)->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) { 
+            die("Error de base de datos: " . $e->getMessage()); 
         }
     }
 
     public function obtenerLotePorId($idLote) {
-        try {
-            $query = "SELECT * FROM lote WHERE idLote = :idLote";
-            $stmt = $this->db->prepare($query);
-            $stmt->execute([':idLote' => $idLote]);
-            return $stmt->fetch(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            die("Error al obtener lote por ID: " . $e->getMessage());
-        }
+        $stmt = $this->db->prepare("SELECT * FROM lote WHERE idLote = :id");
+        $stmt->execute([':id' => $idLote]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    public function registrarLoteDesdeOrden($fk_ordenId, $cantidad, $estado) {
+    public function registrarLote($fk_ordenId, $cantidad, $estado) {
         try {
-            $query = "INSERT INTO lote (FK_ordenId, cantidad, fechaCreacion, estado) 
-                      VALUES (:fk_ordenId, :cantidad, CURDATE(), :estado)";
+            $query = "INSERT INTO lote (FK_ordenId, cantidad, fechaCreacion, estado) VALUES (:fk, :cant, CURDATE(), :est)";
             $stmt = $this->db->prepare($query);
-            $stmt->execute([
-                ':fk_ordenId' => $fk_ordenId,
-                ':cantidad' => $cantidad,
-                ':estado' => $estado
-            ]);
-            return true;
+            return $stmt->execute([':fk' => $fk_ordenId, ':cant' => $cantidad, ':est' => $estado]);
         } catch (PDOException $e) {
-            die("Error en ProduccionModel: " . $e->getMessage());
+            return false;
         }
     }
 
     public function actualizarLote($idLote, $fk_ordenId, $cantidad, $estado) {
+        $query = "UPDATE lote SET FK_ordenId = :fk, cantidad = :cant, estado = :est WHERE idLote = :id";
+        $stmt = $this->db->prepare($query);
+        return $stmt->execute([':fk' => $fk_ordenId, ':cant' => $cantidad, ':est' => $estado, ':id' => $idLote]);
+    }
+
+    public function actualizarEstadoPorOrden($fk_ordenId, $estado) {
         try {
-            $query = "UPDATE lote SET FK_ordenId = :fk_ordenId, cantidad = :cantidad, estado = :estado WHERE idLote = :idLote";
+            $query = "UPDATE lote SET estado = :est WHERE FK_ordenId = :fk";
             $stmt = $this->db->prepare($query);
-            $stmt->execute([
-                ':idLote' => $idLote,
-                ':fk_ordenId' => $fk_ordenId,
-                ':cantidad' => $cantidad,
-                ':estado' => $estado
-            ]);
-            return true;
+            return $stmt->execute([':est' => $estado, ':fk' => $fk_ordenId]);
         } catch (PDOException $e) {
-            die("Error al actualizar lote: " . $e->getMessage());
+            return false;
         }
     }
 
     public function eliminarLote($idLote) {
-        try {
-            $query = "DELETE FROM lote WHERE idLote = :idLote";
-            $stmt = $this->db->prepare($query);
-            $stmt->execute([':idLote' => $idLote]);
-            return true;
-        } catch (PDOException $e) {
-            die("Error al eliminar lote: " . $e->getMessage());
-        }
+        $stmt = $this->db->prepare("DELETE FROM lote WHERE idLote = :id");
+        return $stmt->execute([':id' => $idLote]);
     }
 }
 ?>
