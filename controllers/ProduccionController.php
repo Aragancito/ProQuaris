@@ -1,10 +1,7 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 if (!isset($_SESSION['usuario_nombre'])) {
-    header("Location: /ProQuaris/views/login.php");
+    header("Location: ../views/login.php");
     exit();
 }
 
@@ -42,7 +39,7 @@ class ProduccionController {
         if ($id) {
             $this->model->eliminarLote($id);
         }
-        header("Location: /ProQuaris/controllers/ProduccionController.php?accion=listar");
+        header("Location: ProduccionController.php?accion=listar");
         exit();
     }
 }

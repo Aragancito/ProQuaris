@@ -1,141 +1,185 @@
 <?php
-// ==========================================
-// VERIFICACIÓN DE SESIÓN Y CONFIGURACIÓN
-// ==========================================
-session_start();
-// La API siempre devuelve respuestas en formato JSON
-header('Content-Type: application/json');
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+header("Expires: Mon, 26 Jul 1997 05:00:00 GMT");
 
-// Verifica que el usuario esté autenticado antes de procesar cualquier petición
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 if (!isset($_SESSION['usuario_nombre'])) {
-    echo json_encode(['error' => 'No autorizado']);
+    header("Location: login.php");
     exit();
 }
 
-// ==========================================
-// CONEXIÓN A LA BASE DE DATOS
-// ==========================================
-// ABSTRACCIÓN: PDO oculta los detalles de conexión a MySQL.
-// El resto del código solo interactúa con métodos de PDO (query, prepare, execute).
-try {
-    $conn = new PDO("mysql:host=localhost;dbname=proquaris_bd", "root", "");
-    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch(PDOException $e) {
-    echo json_encode(['error' => 'Error BD: ' . $e->getMessage()]);
-    exit();
-}
-
-// ==========================================
-// ENRUTADOR DE ACCIONES
-// ==========================================
-// POLIMORFISMO: El mismo enrutador maneja diferentes acciones
-// según el parámetro recibido (panel, lotes, inspecciones, etc.)
-$action = $_GET['action'] ?? $_POST['action'] ?? '';
-
-// ==========================================
-// ACCIÓN: PANEL PRINCIPAL
-// ==========================================
-// Retorna los 5 lotes más recientes, el total de defectos y KPIs básicos
-if ($action === 'panel') {
-    // POLIMORFISMO: query() se adapta a diferentes consultas SQL
-    $stmt = $conn->query("SELECT * FROM lote ORDER BY idLote DESC LIMIT 5");
-    $lotes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    $stmt2 = $conn->query("SELECT COUNT(*) as total FROM defecto");
-    $defectos = $stmt2->fetch(PDO::FETCH_ASSOC);
-    
-    // ABSTRACCIÓN: Formatea los datos para el frontend sin exponer la estructura de BD
-    $lotes_recientes = [];
-    foreach ($lotes as $l) {
-        $lotes_recientes[] = [
-            'id' => $l['idLote'],
-            'codigo' => 'LOT-' . $l['idLote'],
-            'producto' => 'Producto',
-            'cantidad' => $l['cantidad'],
-            'estado' => isset($l['estado']) ? $l['estado'] : 'pendiente'
-        ];
-    }
-    
-    echo json_encode([
-        'lotes_asignados' => count($lotes),
-        'defectos_registrados' => $defectos['total'],
-        'tareas_pendientes' => 3,
-        'lotes_recientes' => $lotes_recientes
-    ]);
-    
-// ==========================================
-// ACCIÓN: LISTA DE LOTES
-// ==========================================
-} elseif ($action === 'lotes' || $action === 'mislotes') {
-    $stmt = $conn->query("SELECT * FROM lote ORDER BY idLote DESC");
-    $lotes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // ABSTRACCIÓN: Transforma los datos de BD al formato esperado por el frontend
-    $resultado = [];
-    foreach ($lotes as $l) {
-        $resultado[] = [
-            'id' => $l['idLote'],
-            'codigo' => 'LOT-' . $l['idLote'],
-            'producto' => 'Producto',
-            'cantidad' => $l['cantidad'],
-            'fecha' => isset($l['fechaCreacion']) ? $l['fechaCreacion'] : date('Y-m-d'),
-            'estado' => isset($l['estado']) ? $l['estado'] : 'pendiente'
-        ];
-    }
-    echo json_encode($resultado);
-    
-// ==========================================
-// ACCIÓN: INSPECCIONES
-// ==========================================
-// POLIMORFISMO: LEFT JOIN maneja lotes que no tienen inspecciones
-} elseif ($action === 'inspecciones') {
-    $stmt = $conn->query("SELECT i.*, l.idLote as lote_codigo FROM registroinspeccion i LEFT JOIN lote l ON i.FK_loteld = l.idLote ORDER BY i.idRI DESC");
-    $inspecciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    echo json_encode($inspecciones);
-    
-// ==========================================
-// ACCIÓN: DETALLE DE LOTE
-// ==========================================
-// POLIMORFISMO: La consulta se prepara con un parámetro dinámico
-} elseif ($action === 'detalle_lote') {
-    $id = isset($_GET['id']) ? $_GET['id'] : 0;
-    $stmt = $conn->prepare("SELECT * FROM lote WHERE idLote = ?");
-    $stmt->execute([$id]);
-    $lote = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    if ($lote) {
-        echo json_encode([
-            'id' => $lote['idLote'],
-            'codigo' => 'LOT-' . $lote['idLote'],
-            'producto' => 'Producto',
-            'cantidad' => $lote['cantidad'],
-            'fecha' => $lote['fechaCreacion'],
-            'estado' => $lote['estado']
-        ]);
-    } else {
-        echo json_encode(['error' => 'Lote no encontrado']);
-    }
-    
-// ==========================================
-// ACCIÓN: REGISTRAR DEFECTO
-// ==========================================
-// POLIMORFISMO: La consulta preparada se adapta a diferentes tipos de datos
-} elseif ($action === 'registrar_defecto') {
-    $lote_id = isset($_POST['lote_id']) ? $_POST['lote_id'] : 0;
-    $tipo = isset($_POST['tipo']) ? $_POST['tipo'] : '';
-    $severidad = isset($_POST['severidad']) ? $_POST['severidad'] : '';
-    $descripcion = isset($_POST['descripcion']) ? $_POST['descripcion'] : '';
-    
-    // ABSTRACCIÓN: La consulta preparada oculta los detalles de escape de datos
-    $stmt = $conn->prepare("INSERT INTO defecto (FK_loteld, tipo, severidad, descripcion) VALUES (?, ?, ?, ?)");
-    $resultado = $stmt->execute([$lote_id, $tipo, $severidad, $descripcion]);
-    
-    echo json_encode(['success' => $resultado]);
-    
-// ==========================================
-// ACCIÓN NO VÁLIDA
-// ==========================================
-} else {
-    echo json_encode(['error' => 'Acción no válida: ' . $action]);
-}
+$nombreUsuario = $_SESSION['usuario_nombre'] ?? 'Usuario';
+$rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
 ?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - ProQuaris</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/ProQuaris/views/css/estilos-globales.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+</head>
+<body>
+<div class="dashboard-container">
+    <aside class="sidebar">
+        <div class="sidebar-header"><div class="logo">ProQuaris</div></div>
+        <div class="user-info">
+            <div class="user-name"><?php echo htmlspecialchars($nombreUsuario); ?></div>
+            <div class="user-role"><?php echo htmlspecialchars($rolUsuario); ?></div>
+        </div>
+        <nav class="nav-menu">
+            <a href="/ProQuaris/views/dashboard.php" class="nav-item active">
+                <span class="nav-icon">📊</span>
+                <span>Inicio (Resumen)</span>
+            </a>
+            <a href="/ProQuaris/controllers/OrdenController.php?accion=listar" class="nav-item">
+                <span class="nav-icon">📋</span>
+                <span>Órdenes de Producción</span>
+            </a>
+            <a href="/ProQuaris/controllers/ProduccionController.php?accion=listar" class="nav-item">
+                <span class="nav-icon">🏷️</span>
+                <span>Lotes y Calidad</span>
+            </a>
+            <a href="/ProQuaris/controllers/InventarioController.php?accion=listar" class="nav-item">
+                <span class="nav-icon">📦</span>
+                <span>Inventario Materia Prima</span>
+            </a>
+            <a href="#" class="nav-item">
+                <span class="nav-icon">👥</span>
+                <span>Usuarios y Roles</span>
+            </a>
+        </nav>
+        <div style="padding:20px;">
+            <a href="/ProQuaris/views/logout.php" class="nav-item" style="color:#FF5252;">
+                <span class="nav-icon">🚪</span>
+                <span>Cerrar Sesión</span>
+            </a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="top-bar">
+            <div class="page-title">
+                <h1>Panel de Control Principal</h1>
+                <p>Gestión general de métricas y lotes de planta</p>
+            </div>
+            <a href="/ProQuaris/controllers/OrdenController.php?accion=crear" class="btn-primary">+ Nueva Orden</a>
+        </div>
+
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-title">Órdenes Activas</div>
+                <div class="kpi-value">12</div>
+                <div class="kpi-trend trend-up">↑ +3 vs mes anterior</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Lotes Producidos hoy</div>
+                <div class="kpi-value">45</div>
+                <div class="kpi-trend trend-up">↑ +8% vs ayer</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Alertas de Calidad</div>
+                <div class="kpi-value">3</div>
+                <div class="kpi-trend trend-down">↓ -2 vs semana pasada</div>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <table id="tablaLotes" class="display" style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th>CÓDIGO LOTE</th>
+                        <th>FECHA</th>
+                        <th>CANTIDAD</th>
+                        <th>ESTADO</th>
+                        <th style="text-align: center;">ACCIONES</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>LOT-2026-001</strong></td>
+                        <td>2026-07-22</td>
+                        <td>500 uds</td>
+                        <td><span class="badge badge-success">Aprobado</span></td>
+                        <td style="text-align: center;">
+                            <a href="#" class="btn-action btn-edit" title="Editar lote">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </a>
+                            <a href="#" class="btn-action btn-delete" title="Eliminar lote">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>LOT-2026-002</strong></td>
+                        <td>2026-07-22</td>
+                        <td>350 uds</td>
+                        <td><span class="badge badge-danger">Rechazado</span></td>
+                        <td style="text-align: center;">
+                            <a href="#" class="btn-action btn-edit" title="Editar lote">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </a>
+                            <a href="#" class="btn-action btn-delete" title="Eliminar lote">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            </a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('#tablaLotes').DataTable({
+        language: {
+            processing: "Procesando...",
+            search: "Search:",
+            lengthMenu: "Mostrar _MENU_ registros",
+            info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+            infoEmpty: "Mostrando 0 a 0 de 0 registros",
+            infoFiltered: "(filtrado de _MAX_ registros en total)",
+            loadingRecords: "Cargando...",
+            zeroRecords: "No se encontraron resultados",
+            emptyTable: "Ningún dato disponible en esta tabla",
+            paginate: {
+                first: "Primero",
+                previous: "Previous",
+                next: "Next",
+                last: "Último"
+            }
+        },
+        pageLength: 10
+    });
+});
+
+window.addEventListener('pageshow', function (event) {
+    var isBackNavigation = event.persisted || 
+        (window.performance && window.performance.navigation && window.performance.navigation.type === 2) ||
+        (window.performance && window.performance.getEntriesByType && window.performance.getEntriesByType("navigation")[0]?.type === "back_forward");
+        
+    if (isBackNavigation) {
+        window.location.reload(true);
+    }
+});
+</script>
+<script type="module">
+    import Chatbot from "https://cdn.jsdelivr.net/npm/flowise-embed/dist/web.js"
+    Chatbot.init({
+        chatflowid: "50de36ef-a39c-4cfa-a795-e95952c78ebe",
+        apiHost: "https://cloud.flowiseai.com",
+    })
+</script>
+<script src="/ProQuaris/views/js/lote_admin.js"></script>
+</body>
+</html>

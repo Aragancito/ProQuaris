@@ -7,9 +7,6 @@ if (!isset($_SESSION['usuario_nombre'])) {
     header("Location: /ProQuaris/views/login.php");
     exit();
 }
-
-$nombreUsuario = $_SESSION['usuario_nombre'] ?? 'Usuario';
-$rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -22,23 +19,8 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
 </head>
 <body>
 <div class="dashboard-container">
-    <aside class="sidebar">
-        <div class="sidebar-header"><div class="logo">ProQuaris</div></div>
-        <div class="user-info">
-            <div class="user-name"><?php echo htmlspecialchars($nombreUsuario); ?></div>
-            <div class="user-role"><?php echo htmlspecialchars($rolUsuario); ?></div>
-        </div>
-        <nav class="nav-menu">
-            <a href="/ProQuaris/views/dashboard.php" class="nav-item"><span class="nav-icon">📊</span>Inicio (Resumen)</a>
-            <a href="/ProQuaris/controllers/OrdenController.php?accion=listar" class="nav-item"><span class="nav-icon">📋</span>Órdenes de Producción</a>
-            <a href="/ProQuaris/controllers/ProduccionController.php?accion=listar" class="nav-item active"><span class="nav-icon">🏷️</span>Lotes y Calidad</a>
-            <a href="#" class="nav-item"><span class="nav-icon">📦</span>Inventario Materia Prima</a>
-            <a href="#" class="nav-item"><span class="nav-icon">👥</span>Usuarios y Roles</a>
-        </nav>
-        <div style="padding:20px;">
-            <a href="/ProQuaris/views/logout.php" class="nav-item" style="color:#FF5252;"><span class="nav-icon">🚪</span>Cerrar Sesión</a>
-        </div>
-    </aside>
+    
+    <?php include __DIR__ . '/sidebar.php'; ?>
 
     <main class="main-content">
         <div class="top-bar">
@@ -86,15 +68,12 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
                                     <span class="badge <?php echo $calidadClass; ?>"><?php echo htmlspecialchars($calidad); ?></span>
                                 </td>
                                 <td style="text-align: right; display: flex; justify-content: flex-end; gap: 8px;">
-                                    <!-- Ver Historial de Calidad -->
                                     <a href="/ProQuaris/controllers/CalidadController.php?accion=historial&idLote=<?php echo $lote['idLote']; ?>" class="btn-action" title="Ver Historial de Calidad" style="color: #2196F3;">
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012-2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
                                     </a>
-                                    <!-- Registrar Inspección -->
                                     <a href="/ProQuaris/controllers/CalidadController.php?accion=registrar&idLote=<?php echo $lote['idLote']; ?>" class="btn-action" title="Registrar Inspección" style="color: #4CAF50;">
                                         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                     </a>
-                                    <!-- Eliminar Lote global si es necesario -->
                                     <a href="/ProQuaris/controllers/ProduccionController.php?accion=eliminar&id=<?php echo $lote['idLote']; ?>" class="btn-action btn-delete" title="Eliminar Lote" onclick="return confirm('¿Seguro que deseas eliminar este lote?')">
                                         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                     </a>

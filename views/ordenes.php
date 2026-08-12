@@ -64,8 +64,19 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
         .btn-lotes:hover { background: #2196F3; color: #FFF; }
         .btn-edit { background: rgba(99, 102, 241, 0.15); color: #818CF8; }
         .btn-edit:hover { background: #6366F1; color: #FFF; }
+        .btn-complete { background: rgba(52, 211, 153, 0.15); color: #34D399; }
+        .btn-complete:hover { background: #34D399; color: #FFF; }
         .btn-delete { background: rgba(239, 68, 68, 0.15); color: #F87171; }
         .btn-delete:hover { background: #EF4444; color: #FFF; }
+
+        /* Estilos del Switch Deslizante para Estado */
+        .switch-estado { position: relative; display: inline-block; width: 130px; height: 30px; }
+        .switch-estado select { appearance: none; width: 100%; height: 100%; border-radius: 6px; padding: 0 8px; font-size: 12px; font-weight: bold; cursor: pointer; outline: none; border: 1px solid #334155; }
+        .estado-activa { background: rgba(52, 211, 153, 0.2); color: #34D399; }
+        .estado-proceso { background: rgba(251, 191, 36, 0.2); color: #FBBF24; }
+        .estado-completada { background: rgba(59, 130, 246, 0.2); color: #60A5FA; }
+        .estado-inactiva { background: rgba(248, 113, 113, 0.2); color: #F87171; }
+
         .dataTables_wrapper .dataTables_paginate .paginate_button {
             color: #94A3B8 !important;
             border-radius: 6px !important;
@@ -79,41 +90,8 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
 </head>
 <body>
 <div class="dashboard-container">
-    <aside class="sidebar">
-        <div class="sidebar-header"><div class="logo">ProQuaris</div></div>
-        <div class="user-info">
-            <div class="user-name"><?php echo htmlspecialchars($nombreUsuario); ?></div>
-            <div class="user-role"><?php echo htmlspecialchars($rolUsuario); ?></div>
-        </div>
-        <nav class="nav-menu">
-            <a href="/ProQuaris/views/dashboard.php" class="nav-item">
-                <span class="nav-icon">📊</span>
-                <span>Inicio (Resumen)</span>
-            </a>
-            <a href="/ProQuaris/controllers/OrdenController.php?accion=listar" class="nav-item active">
-                <span class="nav-icon">📋</span>
-                <span>Órdenes de Producción</span>
-            </a>
-            <a href="/ProQuaris/controllers/ProduccionController.php?accion=listar" class="nav-item">
-                <span class="nav-icon">🏷️</span>
-                <span>Lotes y Calidad</span>
-            </a>
-            <a href="#" class="nav-item">
-                <span class="nav-icon">📦</span>
-                <span>Inventario Materia Prima</span>
-            </a>
-            <a href="#" class="nav-item">
-                <span class="nav-icon">👥</span>
-                <span>Usuarios y Roles</span>
-            </a>
-        </nav>
-        <div style="padding:20px;">
-            <a href="/ProQuaris/views/logout.php" class="nav-item" style="color:#FF5252;">
-                <span class="nav-icon">🚪</span>
-                <span>Cerrar Sesión</span>
-            </a>
-        </div>
-    </aside>
+    
+    <?php include __DIR__ . '/sidebar.php'; ?>
 
     <main class="main-content">
         <div class="top-bar">
@@ -121,7 +99,11 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
                 <h1>Órdenes de Producción</h1>
                 <p style="color: #64748B; font-size: 14px; margin-top: 4px;">Gestión general de las órdenes de planta</p>
             </div>
-            <a href="/ProQuaris/controllers/OrdenController.php?accion=crear" class="btn-primary" style="padding:10px 20px; background:#6366F1; color:white; border-radius:8px; text-decoration:none; font-weight:600;">+ Nueva Orden</a>
+            <!-- Botones originales intactos + botón de Histórico -->
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <a href="/ProQuaris/controllers/OrdenController.php?accion=historico" style="padding:10px 16px; background:#334155; color:white; border-radius:8px; text-decoration:none; font-weight:600; font-size: 13px;">📊 Histórico</a>
+                <a href="/ProQuaris/controllers/OrdenController.php?accion=crear" class="btn-primary" style="padding:10px 20px; background:#6366F1; color:white; border-radius:8px; text-decoration:none; font-weight:600;">+ Nueva Orden</a>
+            </div>
         </div>
         
         <div class="table-container" style="margin-top: 20px; padding: 20px; background: #0F172A; border-radius: 12px; border: 1px solid #1E293B;">
@@ -139,30 +121,36 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
                 <tbody>
                     <?php if (!empty($ordenes)): ?>
                         <?php foreach ($ordenes as $o): ?>
+                        <?php 
+                            $estado = $o['estado'] ?? 'Activa';
+                            $claseSelect = 'estado-activa';
+                            if ($estado === 'En Proceso') $claseSelect = 'estado-proceso';
+                            if ($estado === 'Completada') $claseSelect = 'estado-completada';
+                            if ($estado === 'Inactiva') $claseSelect = 'estado-inactiva';
+                        ?>
                         <tr>
                             <td><strong>#<?php echo htmlspecialchars($o['idOrden'] ?? ''); ?></strong></td>
-                            <td style="font-weight: 500; color: #F8FAFC;"><?php echo htmlspecialchars($o['producto'] ?? ''); ?></td>
+                            <td style="font-weight: 500; color: #F8FAFC;"><?php echo htmlspecialchars($o['producto'] ?? 'Producto no especificado'); ?></td>
                             <td><?php echo htmlspecialchars($o['cantidadPlanificada'] ?? ''); ?> uds</td>
                             <td><?php echo htmlspecialchars($o['fechaInicio'] ?? ''); ?></td>
                             <td>
-                                <?php 
-                                    $estado = $o['estado'] ?? 'Pendiente';
-                                    $badgeClass = ($estado === 'Activa' || $estado === 'En Proceso') ? 'badge-success' : 'badge-danger';
-                                ?>
-                                <span class="badge <?php echo $badgeClass; ?>">
-                                    <?php echo htmlspecialchars($estado); ?>
-                                </span>
+                                <!-- Botón Deslizante / Switch Dinámico para cambiar estado -->
+                                <div class="switch-estado">
+                                    <select class="<?php echo $claseSelect; ?>" onchange="cambiarEstadoOrden(<?php echo $o['idOrden']; ?>, this.value)">
+                                        <option value="Activa" <?php echo ($estado === 'Activa') ? 'selected' : ''; ?>>🟢 Activa</option>
+                                        <option value="En Proceso" <?php echo ($estado === 'En Proceso') ? 'selected' : ''; ?>>🟡 En Proceso</option>
+                                        <option value="Completada" <?php echo ($estado === 'Completada') ? 'selected' : ''; ?>>🔵 Completada</option>
+                                        <option value="Inactiva" <?php echo ($estado === 'Inactiva') ? 'selected' : ''; ?>>🔴 Inactiva</option>
+                                    </select>
+                                </div>
                             </td>
                             <td style="text-align: center;">
-                                <!-- Botón para ir al Reporte Global de Lotes y Calidad -->
                                 <a href="/ProQuaris/controllers/ProduccionController.php?accion=listar" class="btn-action btn-lotes" title="Ver Lotes y Calidad">
                                     🏷️
                                 </a>
-                                <!-- Editar Orden -->
                                 <a href="/ProQuaris/controllers/OrdenController.php?accion=editar&id=<?php echo $o['idOrden'] ?? ''; ?>" class="btn-action btn-edit" title="Editar orden">
                                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                 </a>
-                                <!-- Eliminar Orden -->
                                 <a href="/ProQuaris/controllers/OrdenController.php?accion=eliminar&id=<?php echo $o['idOrden'] ?? ''; ?>" class="btn-action btn-delete" onclick="return confirm('¿Eliminar esta orden?')" title="Eliminar orden">
                                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                 </a>
@@ -181,6 +169,21 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
 <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
 <script>
+function cambiarEstadoOrden(idOrden, nuevoEstado) {
+    let mensaje = '¿Desea cambiar el estado de la orden #' + idOrden + ' a "' + nuevoEstado + '"?';
+    if(nuevoEstado === 'Inactiva') {
+        mensaje = '⚠️ ¿Marcar como Inactiva? Esto cancelará la orden y devolverá los insumos/materiales al inventario.';
+    } else if(nuevoEstado === 'Completada') {
+        mensaje = '📊 ¿Marcar como Completada? Esto guardará la orden en el histórico de producción.';
+    }
+
+    if(confirm(mensaje)) {
+        window.location.href = '/ProQuaris/controllers/OrdenController.php?accion=cambiar_estado&id=' + idOrden + '&estado=' + encodeURIComponent(nuevoEstado);
+    } else {
+        location.reload();
+    }
+}
+
 $(document).ready(function() {
     $('#tablaOrdenes').DataTable({
         dom: 'Bfrtip',

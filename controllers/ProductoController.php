@@ -1,6 +1,6 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
-if (!isset($_SESSION['usuario_nombre']) || $_SESSION['usuario_rol'] !== 'Administrador') {
+if (!isset($_SESSION['usuario_nombre'])) {
     header("Location: ../views/login.php");
     exit();
 }
@@ -19,6 +19,8 @@ class ProductoController {
         switch ($accion) {
             case 'listar': $this->listar(); break;
             case 'crear': $this->crear(); break;
+            case 'editar': $this->editar(); break;
+            case 'eliminar': $this->eliminar(); break;
             default: $this->listar(); break;
         }
     }
@@ -30,26 +32,77 @@ class ProductoController {
 
     public function crear() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $datos = [
-                'nombre' => $_POST['nombre'],
-                'descripcion' => $_POST['descripcion'],
-                'precioVenta' => $_POST['precioVenta']
+            $datosProducto = [
+                'nombre' => $_POST['nombre'] ?? '',
+                'descripcion' => $_POST['descripcion'] ?? '',
+                'plusvalia' => $_POST['plusvalia'] ?? 0,
+                'precioVenta' => $_POST['precioVenta'] ?? 0
             ];
-            $idProducto = $this->model->crear($datos);
-
-            // Guardamos los insumos asociados (la receta)
-            if ($idProducto && isset($_POST['insumos']) && is_array($_POST['insumos'])) {
-                foreach ($_POST['insumos'] as $idinventario => $cantidad) {
-                    if ($cantidad > 0) {
-                        $this->model->guardarReceta($idProducto, $idinventario, $cantidad);
-                    }
+            
+            $insumosDirectos = [];
+            if (!empty($_POST['insumos'])) {
+                foreach ($_POST['insumos'] as $ins) {
+                    $insumosDirectos[] = [
+                        'nombre' => $ins['nombre'] ?? '',
+                        'cantidad' => $ins['cantidad'] ?? 0,
+                        'costo' => $ins['costo'] ?? 0,
+                        'unidad' => $ins['unidad'] ?? 'Unidades',
+                        'cantidad_por_empaque' => $ins['cantidad_por_empaque'] ?? 1.00,
+                        'unidad_contenido' => $ins['unidad_contenido'] ?? 'unidades'
+                    ];
                 }
             }
-            header("Location: /ProQuaris/controllers/ProductoController.php?accion=listar");
+
+            $this->model->crearConInsumosDirectos($datosProducto, $insumosDirectos);
+            header("Location: ProductoController.php?accion=listar");
             exit();
         }
-        $insumos = $this->model->obtenerInsumos();
+
+        $action = "/ProQuaris/controllers/ProductoController.php?accion=crear";
         require_once __DIR__ . '/../views/producto_form.php';
+    }
+
+    public function editar() {
+        $id = $_GET['id'] ?? 0;
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $datosProducto = [
+                'nombre' => $_POST['nombre'] ?? '',
+                'descripcion' => $_POST['descripcion'] ?? '',
+                'plusvalia' => $_POST['plusvalia'] ?? 0,
+                'precioVenta' => $_POST['precioVenta'] ?? 0
+            ];
+            
+            $insumosDirectos = [];
+            if (!empty($_POST['insumos'])) {
+                foreach ($_POST['insumos'] as $ins) {
+                    $insumosDirectos[] = [
+                        'nombre' => $ins['nombre'] ?? '',
+                        'cantidad' => $ins['cantidad'] ?? 0,
+                        'costo' => $ins['costo'] ?? 0,
+                        'unidad' => $ins['unidad'] ?? 'Unidades',
+                        'cantidad_por_empaque' => $ins['cantidad_por_empaque'] ?? 1.00,
+                        'unidad_contenido' => $ins['unidad_contenido'] ?? 'unidades'
+                    ];
+                }
+            }
+
+            $this->model->actualizar($id, $datosProducto, $insumosDirectos);
+            header("Location: ProductoController.php?accion=listar");
+            exit();
+        }
+
+        $producto = $this->model->obtenerPorId($id);
+        $insumos = $this->model->obtenerInsumosPorProducto($id);
+        $action = "/ProQuaris/controllers/ProductoController.php?accion=editar&id=" . $id;
+        
+        require_once __DIR__ . '/../views/producto_form.php';
+    }
+
+    public function eliminar() {
+        $id = $_GET['id'] ?? 0;
+        $this->model->eliminar($id);
+        header("Location: ProductoController.php?accion=listar");
+        exit();
     }
 }
 

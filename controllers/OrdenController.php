@@ -18,12 +18,30 @@ switch ($accion) {
         include '../views/ordenes.php';
         break;
 
+    case 'historico':
+        $historicos = $model->obtenerHistoricoCompleto();
+        include '../views/historico_produccion.php';
+        break;
+
+    case 'cambiar_estado':
+        $id = $_GET['id'] ?? 0;
+        $nuevoEstado = $_GET['estado'] ?? 'Activa';
+        $ordenActual = $model->obtenerPorId($id);
+        if ($ordenActual) {
+            $ordenActual['estado'] = $nuevoEstado;
+            $model->actualizar($id, $ordenActual);
+            $prodModel->actualizarEstadoPorOrden($id, $nuevoEstado);
+        }
+        header("Location: OrdenController.php?accion=listar");
+        exit();
+        break;
+
     case 'crear':
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $datos = [
                 'cantidadPlanificada' => $_POST['cantidadPlanificada'],
                 'fechaInicio' => $_POST['fechaInicio'],
-                'producto' => $_POST['producto'],
+                'idProducto' => $_POST['idProducto'],
                 'estado' => $_POST['estado']
             ];
             $idOrdenGenerada = $model->crear($datos);
@@ -42,7 +60,7 @@ switch ($accion) {
             $datos = [
                 'cantidadPlanificada' => $_POST['cantidadPlanificada'],
                 'fechaInicio' => $_POST['fechaInicio'],
-                'producto' => $_POST['producto'],
+                'idProducto' => $_POST['idProducto'],
                 'estado' => $_POST['estado']
             ];
             $model->actualizar($id, $datos);

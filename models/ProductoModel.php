@@ -1,5 +1,5 @@
 <?php
-require_once "../config/conexion.php";
+require_once __DIR__ . '/../config/conexion.php';
 
 class ProductoModel {
     private $db;
@@ -10,48 +10,125 @@ class ProductoModel {
 
     public function obtenerTodos() {
         try {
-            $query = "SELECT * FROM productos";
+            $query = "SELECT * FROM productos ORDER BY idProducto DESC";
             return $this->db->query($query)->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             return [];
         }
     }
 
-    public function crear($datos) {
+    public function obtenerPorId($id) {
         try {
-            $query = "INSERT INTO productos (nombre, descripcion, precioVenta) VALUES (:nombre, :descripcion, :precioVenta)";
+            $stmt = $this->db->prepare("SELECT * FROM productos WHERE idProducto = ?");
+            $stmt->execute([$id]);
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            return null;
+        }
+    }
+
+    public function obtenerInsumosPorProducto($idProducto) {
+        try {
+            $stmt = $this->db->prepare("SELECT * FROM recetas WHERE idProducto = ?");
+            $stmt->execute([$idProducto]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            return [];
+        }
+    }
+
+    public function crearConInsumosDirectos($datosProducto, $insumosDirectos) {
+        try {
+            $this->db->beginTransaction();
+
+            $query = "INSERT INTO productos (nombre, descripcion, plusvalia, precioVenta) VALUES (?, ?, ?, ?)";
             $stmt = $this->db->prepare($query);
             $stmt->execute([
-                ':nombre' => $datos['nombre'],
-                ':descripcion' => $datos['descripcion'],
-                ':precioVenta' => $datos['precioVenta']
+                $datosProducto['nombre'],
+                $datosProducto['descripcion'],
+                $datosProducto['plusvalia'],
+                $datosProducto['precioVenta']
             ]);
-            return $this->db->lastInsertId();
-        } catch (PDOException $e) {
+            $idProducto = $this->db->lastInsertId();
+
+            if (!empty($insumosDirectos)) {
+                $queryReceta = "INSERT INTO recetas (idProducto, insumo_nombre, cantidadRequerida, costoInsumo, unidad, cantidad_por_empaque, unidad_contenido) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                $stmtReceta = $this->db->prepare($queryReceta);
+
+                foreach ($insumosDirectos as $ins) {
+                    if (!empty($ins['nombre']) && !empty($ins['cantidad'])) {
+                        $stmtReceta->execute([
+                            $idProducto,
+                            $ins['nombre'],
+                            $ins['cantidad'],
+                            $ins['costo'] ?? 0,
+                            $ins['unidad'] ?? 'Unidades',
+                            $ins['cantidad_por_empaque'] ?? 1.00,
+                            $ins['unidad_contenido'] ?? 'unidades'
+                        ]);
+                    }
+                }
+            }
+
+            $this->db->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->db->rollBack();
             return false;
         }
     }
 
-    public function obtenerInsumos() {
+    public function actualizar($id, $datosProducto, $insumosDirectos = []) {
         try {
-            // Trae la materia prima de tu tabla inventario actual
-            $query = "SELECT * FROM inventario";
-            return $this->db->query($query)->fetchAll(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            return [];
+            $this->db->beginTransaction();
+
+            $stmt = $this->db->prepare("UPDATE productos SET nombre = ?, descripcion = ?, plusvalia = ?, precioVenta = ? WHERE idProducto = ?");
+            $stmt->execute([
+                $datosProducto['nombre'],
+                $datosProducto['descripcion'],
+                $datosProducto['plusvalia'],
+                $datosProducto['precioVenta'],
+                $id
+            ]);
+
+            $this->db->prepare("DELETE FROM recetas WHERE idProducto = ?")->execute([$id]);
+
+            if (!empty($insumosDirectos)) {
+                $queryReceta = "INSERT INTO recetas (idProducto, insumo_nombre, cantidadRequerida, costoInsumo, unidad, cantidad_por_empaque, unidad_contenido) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                $stmtReceta = $this->db->prepare($queryReceta);
+
+                foreach ($insumosDirectos as $ins) {
+                    if (!empty($ins['nombre']) && !empty($ins['cantidad'])) {
+                        $stmtReceta->execute([
+                            $id,
+                            $ins['nombre'],
+                            $ins['cantidad'],
+                            $ins['costo'] ?? 0,
+                            $ins['unidad'] ?? 'Unidades',
+                            $ins['cantidad_por_empaque'] ?? 1.00,
+                            $ins['unidad_contenido'] ?? 'unidades'
+                        ]);
+                    }
+                }
+            }
+
+            $this->db->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            return false;
         }
     }
 
-    public function guardarReceta($idProducto, $idinventario, $cantidadRequerida) {
+    public function eliminar($id) {
         try {
-            $query = "INSERT INTO recetas (idProducto, idinventario, cantidadRequerida) VALUES (:prod, :ins, :cant)";
-            $stmt = $this->db->prepare($query);
-            return $stmt->execute([
-                ':prod' => $idProducto,
-                ':ins' => $idinventario,
-                ':cant' => $cantidadRequerida
-            ]);
-        } catch (PDOException $e) {
+            $this->db->beginTransaction();
+            $this->db->prepare("DELETE FROM recetas WHERE idProducto = ?")->execute([$id]);
+            $this->db->prepare("DELETE FROM productos WHERE idProducto = ?")->execute([$id]);
+            $this->db->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->db->rollBack();
             return false;
         }
     }
