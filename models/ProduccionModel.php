@@ -26,7 +26,7 @@ class ProduccionModel {
     }
 
     public function obtenerLotePorId($idLote) {
-        $stmt = $this->db->prepare("SELECT l.*, o.cantidadPlanificada, p.nombre AS producto, p.idProducto, p.precioVenta FROM lote l 
+        $stmt = $this->db->prepare("SELECT l.*, o.cantidadPlanificada AS cantidadPlanificadaOrden, p.nombre AS producto, p.idProducto, p.precioVenta, p.plusvalia FROM lote l 
                                     JOIN ordenproduccion o ON l.FK_ordenId = o.idOrden
                                     LEFT JOIN productos p ON o.idProducto = p.idProducto
                                     WHERE l.idLote = :id");
@@ -44,9 +44,9 @@ class ProduccionModel {
         try {
             $this->db->beginTransaction();
 
-            $query = "INSERT INTO lote (FK_ordenId, cantidad, fechaCreacion, estado) VALUES (:fk, :cant, CURDATE(), :est)";
+            $query = "INSERT INTO lote (FK_ordenId, cantidad, cantidadPlanificada, fechaCreacion, estado) VALUES (:fk, :cant, :plan, CURDATE(), :est)";
             $stmt = $this->db->prepare($query);
-            $stmt->execute([':fk' => $fk_ordenId, ':cant' => $cantidad, ':est' => $estado]);
+            $stmt->execute([':fk' => $fk_ordenId, ':cant' => $cantidad, ':plan' => $cantidad, ':est' => $estado]);
             $idLoteGenerado = $this->db->lastInsertId();
 
             $stmtOrden = $this->db->prepare("SELECT idProducto FROM ordenproduccion WHERE idOrden = ?");
@@ -58,13 +58,21 @@ class ProduccionModel {
                 $stmtRecetas->execute([$orden['idProducto']]);
                 $recetas = $stmtRecetas->fetchAll(PDO::FETCH_ASSOC);
 
-                $stmtIns = $this->db->prepare("INSERT INTO lote_insumos_reales (FK_loteId, insumo_nombre, cantidadRequerida, costoInsumo, unidad, cantidad_por_empaque, unidad_contenido) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                // La receta describe UNA unidad: para el lote se multiplica por las unidades a producir.
+                $stmtIns = $this->db->prepare("INSERT INTO lote_insumos_reales (FK_loteId, insumo_nombre, cantidadPorUnidad, cantidadRequerida, cantidadConsumida, costoInsumo, costoUnitario, unidad, cantidad_por_empaque, unidad_contenido) VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?)");
                 foreach ($recetas as $rec) {
+                    $cantidadPorUnidad = abs(floatval($rec['cantidadRequerida']));
+                    $costoRecetaLinea = abs(floatval($rec['costoInsumo']));
+                    $costoUnitario = ($cantidadPorUnidad != 0) ? ($costoRecetaLinea / $cantidadPorUnidad) : $costoRecetaLinea;
+                    $cantidadLote = $cantidadPorUnidad * $cantidad;
+
                     $stmtIns->execute([
                         $idLoteGenerado,
                         $rec['insumo_nombre'],
-                        $rec['cantidadRequerida'],
-                        $rec['costoInsumo'],
+                        $cantidadPorUnidad,
+                        $cantidadLote,
+                        $cantidadLote * $costoUnitario,
+                        $costoUnitario,
                         $rec['unidad'] ?? 'Unidades',
                         $rec['cantidad_por_empaque'] ?? 1.00,
                         $rec['unidad_contenido'] ?? 'unidades'
@@ -102,24 +110,17 @@ class ProduccionModel {
         }
     }
 
-    public function actualizarInsumosRealesLote($idLote, $insumosReales) {
+    // Guarda SOLO el consumo real de la inspección. El plan del lote
+    // (cantidadRequerida) nunca se sobreescribe, para no perder la referencia.
+    public function actualizarConsumoInsumosLote($idLote, $insumosReales) {
         try {
             $this->db->beginTransaction();
-            $this->db->prepare("DELETE FROM lote_insumos_reales WHERE FK_loteId = ?")->execute([$idLote]);
 
-            $stmtIns = $this->db->prepare("INSERT INTO lote_insumos_reales (FK_loteId, insumo_nombre, cantidadRequerida, costoInsumo, unidad, cantidad_por_empaque, unidad_contenido) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmtUpd = $this->db->prepare("UPDATE lote_insumos_reales SET cantidadConsumida = ? WHERE idLoteInsumo = ? AND FK_loteId = ?");
             foreach ($insumosReales as $ins) {
-                if (!empty($ins['nombre'])) {
-                    $stmtIns->execute([
-                        $idLote,
-                        $ins['nombre'],
-                        $ins['cantidad'] ?? 0,
-                        $ins['costo'] ?? 0,
-                        $ins['unidad'] ?? 'Unidades',
-                        $ins['cantidad_por_empaque'] ?? 1.00,
-                        $ins['unidad_contenido'] ?? 'unidades'
-                    ]);
-                }
+                if (!isset($ins['id'])) continue;
+                $consumida = max(0, floatval($ins['cantidad'] ?? 0));
+                $stmtUpd->execute([$consumida, intval($ins['id']), $idLote]);
             }
 
             $this->db->commit();
