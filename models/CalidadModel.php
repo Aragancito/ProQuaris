@@ -8,7 +8,26 @@ class CalidadModel {
         $this->db = Conexion::conectar();
     }
 
-    public function guardarInspeccion($idLote, $resultado, $motivo, $observaciones, $unidadesDefectuosas, $inspectorId, $impactoFinanciero = 0, $unidadesBase = 0) {
+    // Suma las unidades defectuosas ya registradas en el lote.
+    // $excluirIdRI permite ignorar la inspección que se está editando.
+    public function sumarDefectuosasPorLote($idLote, $excluirIdRI = null) {
+        try {
+            $sql = "SELECT COALESCE(SUM(unidades_defectuosas), 0) AS total FROM registroinspeccion WHERE FK_loteId = :loteId";
+            $params = [':loteId' => $idLote];
+            if (!empty($excluirIdRI)) {
+                $sql .= " AND idRI <> :idRI";
+                $params[':idRI'] = $excluirIdRI;
+            }
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            $fila = $stmt->fetch(PDO::FETCH_ASSOC);
+            return intval($fila['total'] ?? 0);
+        } catch (PDOException $e) {
+            return 0;
+        }
+    }
+
+    public function guardarInspeccion($idLote, $resultado, $motivo, $observaciones, $unidadesDefectuosas, $inspectorId, $impactoFinanciero = 0, $unidadesBase = 0, $porcentajeRendimiento = 0) {
         try {
             $stmtUser = $this->db->prepare("SELECT id FROM usuario WHERE id = :id");
             $stmtUser->execute([':id' => $inspectorId]);
@@ -30,8 +49,8 @@ class CalidadModel {
             $observacionesCompletas = "Motivo: " . $motivo . " - Detalle: " . $observaciones;
 
             $query = "INSERT INTO registroinspeccion 
-                      (FK_loteId, FK_inspectorId, fecha, resultado, observaciones, unidades_defectuosas, producto_nombre, impacto_financiero, unidades_base_inspeccion) 
-                      VALUES (:loteId, :inspector, NOW(), :resultado, :obs, :defectuosas, :prodNombre, :impacto, :unidadesBase)";
+                      (FK_loteId, FK_inspectorId, fecha, resultado, observaciones, unidades_defectuosas, producto_nombre, impacto_financiero, porcentaje_rendimiento, unidades_base_inspeccion) 
+                      VALUES (:loteId, :inspector, NOW(), :resultado, :obs, :defectuosas, :prodNombre, :impacto, :porcentaje, :unidadesBase)";
             
             $stmt = $this->db->prepare($query);
             $stmt->execute([
@@ -42,6 +61,7 @@ class CalidadModel {
                 ':defectuosas' => $unidadesDefectuosas,
                 ':prodNombre' => $nombreProducto,
                 ':impacto' => $impactoFinanciero,
+                ':porcentaje' => $porcentajeRendimiento,
                 ':unidadesBase' => $unidadesBase
             ]);
             return true;
@@ -80,15 +100,17 @@ class CalidadModel {
         }
     }
 
-    public function actualizarInspeccion($idRI, $resultado, $motivo, $observaciones, $unidadesDefectuosas, $impactoFinanciero) {
+    public function actualizarInspeccion($idRI, $resultado, $motivo, $observaciones, $unidadesDefectuosas, $impactoFinanciero, $unidadesBase = 0, $porcentajeRendimiento = 0) {
         try {
             $observacionesCompletas = "Motivo: " . $motivo . " - Detalle: " . $observaciones;
-            $stmt = $this->db->prepare("UPDATE registroinspeccion SET resultado = :res, observaciones = :obs, unidades_defectuosas = :def, impacto_financiero = :imp WHERE idRI = :id");
+            $stmt = $this->db->prepare("UPDATE registroinspeccion SET resultado = :res, observaciones = :obs, unidades_defectuosas = :def, impacto_financiero = :imp, porcentaje_rendimiento = :porc, unidades_base_inspeccion = :base WHERE idRI = :id");
             return $stmt->execute([
                 ':res' => $resultado,
                 ':obs' => $observacionesCompletas,
                 ':def' => $unidadesDefectuosas,
                 ':imp' => $impactoFinanciero,
+                ':porc' => $porcentajeRendimiento,
+                ':base' => $unidadesBase,
                 ':id' => $idRI
             ]);
         } catch (PDOException $e) {
