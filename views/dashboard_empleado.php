@@ -1,122 +1,183 @@
 <?php
-// Encabezados HTTP estrictos para impedir caché en navegadores
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 header("Expires: Mon, 26 Jul 1997 05:00:00 GMT");
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 if (!isset($_SESSION['usuario_nombre'])) {
     header("Location: login.php");
     exit();
 }
 
-$nombre = $_SESSION['usuario_nombre'];
-$rol = $_SESSION['usuario_rol'];
-?>
+$nombreUsuario = $_SESSION['usuario_nombre'] ?? 'Operario';
+$rolUsuario = $_SESSION['usuario_rol'] ?? 'Operario';
+$adminIdPlanta = $_SESSION['admin_id'] ?? ''; 
+$estadoUsuario = $_SESSION['estado'] ?? 'Pendiente'; // Verificamos si ya lo aprobaron
 
+// Variables para saber si el operario puede trabajar
+$tienePlanta = !empty($adminIdPlanta);
+$estaAprobado = ($estadoUsuario === 'Activo');
+$puedeOperar = ($tienePlanta && $estaAprobado);
+
+require_once __DIR__ . '/../config/conexion.php';
+$db = Conexion::conectar();
+
+$countActivas = 0; $countLotes = 0; $countAlertas = 0; $totalInspecciones = 0; $ordenesActivasList = [];
+
+// Solo extraemos datos si está aprobado y tiene planta
+if ($puedeOperar) {
+    try {
+        $stmtActivas = $db->prepare("SELECT COUNT(*) FROM ordenproduccion WHERE estado = 'Activa' AND admin_id = ?");
+        $stmtActivas->execute([$adminIdPlanta]);
+        $countActivas = $stmtActivas->fetchColumn() ?: 0;
+    } catch (Exception $e) {}
+
+    try {
+        $stmtLotes = $db->prepare("SELECT COUNT(l.idLote) FROM lote l JOIN ordenproduccion o ON l.FK_ordenId = o.idOrden WHERE o.estado = 'Activa' AND o.admin_id = ?");
+        $stmtLotes->execute([$adminIdPlanta]);
+        $countLotes = $stmtLotes->fetchColumn() ?: 0;
+    } catch (Exception $e) {}
+
+    try {
+        $stmtAlertas = $db->prepare("SELECT COUNT(*) FROM registroinspeccion WHERE resultado = 'Rechazado' AND admin_id = ?");
+        $stmtAlertas->execute([$adminIdPlanta]);
+        $countAlertas = $stmtAlertas->fetchColumn() ?: 0;
+    } catch (Exception $e) {}
+
+    try {
+        $stmtInsp = $db->prepare("SELECT COUNT(*) FROM registroinspeccion WHERE admin_id = ?");
+        $stmtInsp->execute([$adminIdPlanta]);
+        $totalInspecciones = $stmtInsp->fetchColumn() ?: 0;
+    } catch (Exception $e) {}
+
+    try {
+        // CORRECCIÓN: producto AS productoNombre para evitar error de array key
+        $stmtOrdenes = $db->prepare("SELECT *, producto AS productoNombre FROM ordenproduccion WHERE estado = 'Activa' AND admin_id = ? ORDER BY idOrden DESC LIMIT 5");
+        $stmtOrdenes->execute([$adminIdPlanta]);
+        $ordenesActivasList = $stmtOrdenes->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {}
+}
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Panel Empleado - ProQuaris</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Vinculamos los estilos globales unificados -->
-    <link rel="stylesheet" href="css/estilos-globales.css">
+    <title>Panel Operativo - ProQuaris</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/ProQuaris/views/css/estilos-globales.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
 </head>
 <body>
-    <div class="dashboard-container">
-        <!-- Sidebar adaptado a la estructura global -->
-        <aside class="sidebar">
-            <div>
-                <div class="sidebar-header">
-                    <div class="logo">ProQuaris</div>
-                </div>
-                <div class="user-info">
-                    <div class="user-name"><?php echo htmlspecialchars($nombre); ?></div>
-                    <div class="user-role"><?php echo htmlspecialchars($rol); ?></div>
-                </div>
-                <div class="nav-menu">
-                    <div class="nav-item active" data-page="panel"><span class="nav-icon">📊</span> Mi Panel</div>
-                    <div class="nav-item" data-page="lotes"><span class="nav-icon">🏷️</span> Mis Lotes</div>
-                    <div class="nav-item" data-page="defectos"><span class="nav-icon">🔍</span> Registrar Defecto</div>
-                    <div class="nav-item" data-page="inspecciones"><span class="nav-icon">📋</span> Inspecciones</div>
-                </div>
-            </div>
-            <div style="padding: 16px 12px;">
-                <a href="logout.php" class="nav-item" style="color: var(--color-alerta);">
-                    <span class="nav-icon">🚪</span> Cerrar Sesión
-                </a>
-            </div>
-        </aside>
+<div class="dashboard-container">
+    
+    <?php include __DIR__ . '/sidebar.php'; ?>
 
-        <div class="main-content" id="main-content">Cargando...</div>
-    </div>
-
-    <!-- Modales -->
-    <div id="modalDefecto" class="modal">
-        <div class="modal-content">
-            <h3>Registrar Defecto</h3>
-            <form id="formDefecto">
-                <select id="lote_id" required><option value="">Seleccione un lote</option></select>
-                <input type="text" id="tipo_defecto" placeholder="Tipo de defecto" required>
-                <select id="severidad" required>
-                    <option value="">Severidad</option>
-                    <option>Menor</option>
-                    <option>Media</option>
-                    <option>Critica</option>
-                </select>
-                <textarea id="descripcion" placeholder="Descripción" rows="3"></textarea>
-                <div class="modal-buttons">
-                    <button type="button" class="btn-cancel" onclick="cerrarModal()">Cancelar</button>
-                    <button type="submit" class="btn-primary">Guardar</button>
-                </div>
-            </form>
+    <main class="main-content">
+        <div class="top-bar">
+            <div class="page-title">
+                <h1>Panel de Operaciones en Planta</h1>
+                <p>Control de producción, lotes activos e inspecciones de calidad en tiempo real</p>
+            </div>
+            <?php if ($puedeOperar): ?>
+                <a href="/ProQuaris/controllers/OrdenController.php?accion=crear" class="btn-primary">+ Nueva Orden</a>
+            <?php endif; ?>
         </div>
-    </div>
 
-    <div id="modalDetalle" class="modal">
-        <div class="modal-content" style="width: 500px;">
-            <h3>Detalle del Lote</h3>
-            <div id="detalleLote"></div>
-            <div class="modal-buttons">
-                <button type="button" class="btn-cancel" onclick="cerrarModalDetalle()">Cerrar</button>
+        <?php if (!$tienePlanta): ?>
+            <!-- ALERTA: SIN PLANTA ASIGNADA -->
+            <div style="background-color: rgba(245, 158, 11, 0.1); border: 1px solid #F59E0B; padding: 20px; border-radius: 8px; margin-bottom: 25px; color: #FCD34D;">
+                <h3 style="margin-bottom: 10px;">⚠️ Requiere Asignación de Planta</h3>
+                <p>Aún no has seleccionado tu Administrador Supervisor. Por favor, ve a la sección de <strong>Usuarios y Roles</strong> para enviar tu solicitud a una planta.</p>
+            </div>
+        <?php elseif (!$estaAprobado): ?>
+            <!-- ALERTA: ESPERANDO APROBACIÓN -->
+            <div style="background-color: rgba(56, 189, 248, 0.1); border: 1px solid #38BDF8; padding: 20px; border-radius: 8px; margin-bottom: 25px; color: #BAE6FD;">
+                <h3 style="margin-bottom: 10px;">⏳ Esperando Aprobación</h3>
+                <p>Tu solicitud ha sido enviada al Administrador. Las funciones de producción se activarán <strong>automáticamente</strong> en cuanto aprueben tu acceso.</p>
+            </div>
+        <?php endif; ?>
+
+        <!-- KPI's (Si no está aprobado se muestran en 0) -->
+        <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
+            <div class="kpi-card">
+                <div class="kpi-title">Órdenes Activas</div>
+                <div class="kpi-value" style="color: #38BDF8;"><?php echo $countActivas; ?></div>
+                <div class="kpi-trend trend-up">En proceso en planta</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Lotes Activos</div>
+                <div class="kpi-value" style="color: #34D399;"><?php echo $countLotes; ?></div>
+                <div class="kpi-trend trend-up">Trazabilidad activa</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Alertas de Calidad</div>
+                <div class="kpi-value" style="color: #F87171;"><?php echo $countAlertas; ?></div>
+                <div class="kpi-trend trend-down">Lotes rechazados</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Inspecciones Totales</div>
+                <div class="kpi-value" style="color: #A855F7;"><?php echo $totalInspecciones; ?></div>
+                <div class="kpi-trend trend-up">Registros de control</div>
             </div>
         </div>
-    </div>
 
-    <!-- Librerías JS Externas -->
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+        <!-- TABLA DE ÓRDENES ACTIVAS EN PLANTA -->
+        <div class="table-container" style="margin-top: 25px; margin-bottom: 40px;">
+            <h3 style="color: #F8FAFC; margin-bottom: 15px; font-size: 16px;">Órdenes de Producción Activas (Para Ejecución)</h3>
+            <table id="tablaOperativa" class="display" style="width: 100%; color: #CBD5E1;">
+                <thead>
+                    <tr style="color: #94A3B8; text-transform: uppercase; font-size: 12px;">
+                        <th>REF. ORDEN</th>
+                        <th>PRODUCTO</th>
+                        <th>CANTIDAD PLANIFICADA</th>
+                        <th>ESTADO</th>
+                        <th style="text-align: center;">ACCIONES / CALIDAD</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (!empty($ordenesActivasList) && $puedeOperar): ?>
+                        <?php foreach ($ordenesActivasList as $ord): ?>
+                        <tr>
+                            <td><strong style="color: #38BDF8;">Orden #<?php echo htmlspecialchars($ord['idOrden']); ?></strong></td>
+                            <td style="font-weight: bold; color: #FFF;"><?php echo htmlspecialchars($ord['productoNombre'] ?? ''); ?></td>
+                            <td><?php echo htmlspecialchars($ord['cantidadPlanificada']); ?> uds</td>
+                            <td><span style="color: #34D399; font-weight: bold;"><?php echo htmlspecialchars($ord['estado']); ?></span></td>
+                            <td style="text-align: center;">
+                                <a href="/ProQuaris/controllers/ProduccionController.php?accion=listar" style="padding: 6px 12px; background: #3B82F6; color: white; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: bold;">
+                                    🔍 Ver Lotes / Inspeccionar
+                                </a>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
 
-    <!-- Tu script modular en la carpeta js/ -->
-    <script src="js/empleado.js"></script>
-
-    <!-- Script de seguridad para evitar caché en botón atrás -->
-    <script>
-    window.addEventListener('pageshow', function (event) {
-        var isBackNavigation = event.persisted || 
-            (window.performance && window.performance.navigation && window.performance.navigation.type === 2) ||
-            (window.performance && window.performance.getEntriesByType && window.performance.getEntriesByType("navigation")[0]?.type === "back_forward");
-            
-        if (isBackNavigation) {
-            window.location.reload(true);
-        }
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('#tablaOperativa').DataTable({
+        language: {
+            processing: "Procesando...",
+            search: "Buscar:",
+            lengthMenu: "Mostrar _MENU_ registros",
+            info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+            infoEmpty: "Mostrando 0 a 0 de 0 registros",
+            infoFiltered: "(filtrado de _MAX_ registros en total)",
+            loadingRecords: "Cargando...",
+            zeroRecords: "No hay órdenes activas en este momento",
+            emptyTable: "No hay órdenes activas en planta o tu acceso aún no está aprobado",
+            paginate: { first: "Primero", previous: "Anterior", next: "Siguiente", last: "Último" }
+        },
+        pageLength: 5
     });
-    </script>
-
-    <!-- Chatbot Flowise -->
-    <script type="module">
-        import Chatbot from "https://cdn.jsdelivr.net/npm/flowise-embed/dist/web.js"
-        Chatbot.init({
-            chatflowid: "50de36ef-a39c-4cfa-a795-e95952c78ebe",
-            apiHost: "https://cloud.flowiseai.com",
-        })
-    </script>
+});
+</script>
 </body>
 </html>

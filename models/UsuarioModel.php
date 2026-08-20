@@ -17,16 +17,18 @@ class UsuarioModel {
             correo VARCHAR(50) UNIQUE NOT NULL,
             contraseña VARCHAR(255) NOT NULL,
             rol VARCHAR(20) NOT NULL,
-            estado VARCHAR(15) DEFAULT 'Activo'
+            estado VARCHAR(15) DEFAULT 'Activo',
+            admin_asignado VARCHAR(36) NULL,
+            empresa VARCHAR(100) NULL
         )";
         $this->db->exec($sql);
     }
 
     public function registrarUsuario($datos) {
-        $id = bin2hex(random_bytes(16));
+        $id = uniqid('usr_', true); 
         
-        $sql = "INSERT INTO usuario (id, nombre, apellido, correo, contraseña, rol, estado) 
-                VALUES (?, ?, ?, ?, ?, ?, 'Activo')";
+        $sql = "INSERT INTO usuario (id, nombre, apellido, correo, contraseña, rol, estado, empresa) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         
         $stmt = $this->db->prepare($sql);
         return $stmt->execute([
@@ -35,7 +37,9 @@ class UsuarioModel {
             $datos['apellido'],
             $datos['correo'],
             $datos['contraseña'],
-            $datos['rol']
+            $datos['rol'],
+            $datos['estado'],
+            $datos['empresa']
         ]);
     }
 
@@ -44,6 +48,31 @@ class UsuarioModel {
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$correo]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function actualizarAdminAsignado($idUsuario, $adminAsignado) {
+        $sql = "UPDATE usuario SET admin_asignado = ? WHERE id = ?";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$adminAsignado, $idUsuario]);
+    }
+
+    public function cambiarEstado($idUsuario, $nuevoEstado) {
+        $sql = "UPDATE usuario SET estado = ? WHERE id = ?";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$nuevoEstado, $idUsuario]);
+    }
+
+    // NUEVA FUNCIÓN: Desvincula al empleado sin borrar su cuenta
+    public function desvincularUsuario($id) {
+        $sql = "UPDATE usuario SET admin_asignado = NULL, estado = 'Pendiente' WHERE id = ?";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$id]);
+    }
+
+    public function eliminarUsuario($id) {
+        $sql = "DELETE FROM usuario WHERE id = ?";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$id]);
     }
 }
 ?>

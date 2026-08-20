@@ -1,8 +1,17 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
-if (!isset($_SESSION['usuario_nombre'])) {
+
+if (!isset($_SESSION['usuario_nombre']) || !in_array($_SESSION['usuario_rol'], ['Administrador', 'Operario'])) {
     header("Location: ../views/login.php");
     exit();
+}
+
+// BLOQUEO ESTRICTO: Si es operario, debe tener planta Y estar aprobado
+if ($_SESSION['usuario_rol'] === 'Operario') {
+    if (empty($_SESSION['admin_id']) || ($_SESSION['estado'] ?? '') !== 'Activo') {
+        header("Location: ../views/usuarios.php"); 
+        exit();
+    }
 }
 
 require_once __DIR__ . '/../models/ProductoModel.php';
