@@ -6,7 +6,7 @@ if (!isset($_SESSION['usuario_nombre']) || !in_array($_SESSION['usuario_rol'], [
     exit();
 }
 
-// BLOQUEO ESTRICTO: Si es operario, debe tener planta Y estar aprobado
+// Validación de planta y aprobación
 if ($_SESSION['usuario_rol'] === 'Operario') {
     if (empty($_SESSION['admin_id']) || ($_SESSION['estado'] ?? '') !== 'Activo') {
         header("Location: ../views/usuarios.php"); 
@@ -26,11 +26,24 @@ class ProductoController {
     public function procesarAccion() {
         $accion = $_GET['accion'] ?? 'listar';
         switch ($accion) {
-            case 'listar': $this->listar(); break;
-            case 'crear': $this->crear(); break;
-            case 'editar': $this->editar(); break;
-            case 'eliminar': $this->eliminar(); break;
-            default: $this->listar(); break;
+            case 'listar': 
+                $this->listar(); 
+                break;
+            case 'crear': 
+            case 'editar': 
+            case 'eliminar': 
+                // Restricción: Solo el Administrador puede gestionar productos
+                if (($_SESSION['usuario_rol'] ?? '') !== 'Administrador') {
+                    header("Location: ProductoController.php?accion=listar");
+                    exit();
+                }
+                if ($accion === 'crear') $this->crear();
+                elseif ($accion === 'editar') $this->editar();
+                elseif ($accion === 'eliminar') $this->eliminar();
+                break;
+            default: 
+                $this->listar(); 
+                break;
         }
     }
 
@@ -40,7 +53,9 @@ class ProductoController {
     }
 
     public function crear() {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD') ?: ($_SERVER['REQUEST_METHOD'] ?? '');
+
+        if ($requestMethod === 'POST') {
             $datosProducto = [
                 'nombre' => $_POST['nombre'] ?? '',
                 'descripcion' => $_POST['descripcion'] ?? '',
@@ -73,7 +88,9 @@ class ProductoController {
 
     public function editar() {
         $id = $_GET['id'] ?? 0;
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $requestMethod = filter_input(INPUT_SERVER, 'REQUEST_METHOD') ?: ($_SERVER['REQUEST_METHOD'] ?? '');
+
+        if ($requestMethod === 'POST') {
             $datosProducto = [
                 'nombre' => $_POST['nombre'] ?? '',
                 'descripcion' => $_POST['descripcion'] ?? '',

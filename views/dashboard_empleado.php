@@ -6,27 +6,35 @@ header("Expires: Mon, 26 Jul 1997 05:00:00 GMT");
 
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
-if (!isset($_SESSION['usuario_nombre'])) {
+if (!isset($_SESSION['usuario_nombre']) || !isset($_SESSION['usuario_id'])) {
     header("Location: login.php");
     exit();
 }
 
-$nombreUsuario = $_SESSION['usuario_nombre'] ?? 'Operario';
-$rolUsuario = $_SESSION['usuario_rol'] ?? 'Operario';
-$adminIdPlanta = $_SESSION['admin_id'] ?? ''; 
-$estadoUsuario = $_SESSION['estado'] ?? 'Pendiente'; // Verificamos si ya lo aprobaron
+require_once __DIR__ . '/../config/conexion.php';
+$db = Conexion::conectar();
 
-// Variables para saber si el operario puede trabajar
+$idUsuarioActual = $_SESSION['usuario_id'];
+
+// CONSULTA EN VIVO: Verifica el estado y la planta directamente de la BD
+$stmtCheck = $db->prepare("SELECT estado, admin_asignado FROM usuario WHERE id = ?");
+$stmtCheck->execute([$idUsuarioActual]);
+$datosActuales = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+$estadoUsuario = $datosActuales['estado'] ?? 'Pendiente';
+$adminIdPlanta = $datosActuales['admin_asignado'] ?? '';
+
+// Actualizamos la sesión al vuelo
+$_SESSION['estado'] = $estadoUsuario;
+$_SESSION['admin_id'] = $adminIdPlanta;
+
+$nombreUsuario = $_SESSION['usuario_nombre'] ?? 'Operario';
 $tienePlanta = !empty($adminIdPlanta);
 $estaAprobado = ($estadoUsuario === 'Activo');
 $puedeOperar = ($tienePlanta && $estaAprobado);
 
-require_once __DIR__ . '/../config/conexion.php';
-$db = Conexion::conectar();
-
 $countActivas = 0; $countLotes = 0; $countAlertas = 0; $totalInspecciones = 0; $ordenesActivasList = [];
 
-// Solo extraemos datos si está aprobado y tiene planta
 if ($puedeOperar) {
     try {
         $stmtActivas = $db->prepare("SELECT COUNT(*) FROM ordenproduccion WHERE estado = 'Activa' AND admin_id = ?");
@@ -53,7 +61,6 @@ if ($puedeOperar) {
     } catch (Exception $e) {}
 
     try {
-        // CORRECCIÓN: producto AS productoNombre para evitar error de array key
         $stmtOrdenes = $db->prepare("SELECT *, producto AS productoNombre FROM ordenproduccion WHERE estado = 'Activa' AND admin_id = ? ORDER BY idOrden DESC LIMIT 5");
         $stmtOrdenes->execute([$adminIdPlanta]);
         $ordenesActivasList = $stmtOrdenes->fetchAll(PDO::FETCH_ASSOC);
@@ -71,9 +78,7 @@ if ($puedeOperar) {
 </head>
 <body>
 <div class="dashboard-container">
-    
     <?php include __DIR__ . '/sidebar.php'; ?>
-
     <main class="main-content">
         <div class="top-bar">
             <div class="page-title">
@@ -86,20 +91,18 @@ if ($puedeOperar) {
         </div>
 
         <?php if (!$tienePlanta): ?>
-            <!-- ALERTA: SIN PLANTA ASIGNADA -->
             <div style="background-color: rgba(245, 158, 11, 0.1); border: 1px solid #F59E0B; padding: 20px; border-radius: 8px; margin-bottom: 25px; color: #FCD34D;">
                 <h3 style="margin-bottom: 10px;">⚠️ Requiere Asignación de Planta</h3>
-                <p>Aún no has seleccionado tu Administrador Supervisor. Por favor, ve a la sección de <strong>Usuarios y Roles</strong> para enviar tu solicitud a una planta.</p>
+                <p>Aún no has seleccionado tu Administrador Supervisor. Por favor, ve a la sección de <strong>Usuarios y Roles</strong>.</p>
             </div>
         <?php elseif (!$estaAprobado): ?>
-            <!-- ALERTA: ESPERANDO APROBACIÓN -->
             <div style="background-color: rgba(56, 189, 248, 0.1); border: 1px solid #38BDF8; padding: 20px; border-radius: 8px; margin-bottom: 25px; color: #BAE6FD;">
                 <h3 style="margin-bottom: 10px;">⏳ Esperando Aprobación</h3>
-                <p>Tu solicitud ha sido enviada al Administrador. Las funciones de producción se activarán <strong>automáticamente</strong> en cuanto aprueben tu acceso.</p>
+                <p>Tu solicitud ha sido enviada al Administrador. En cuanto te apruebe, podrás ver y gestionar las órdenes de la planta aquí mismo.</p>
             </div>
         <?php endif; ?>
 
-        <!-- KPI's (Si no está aprobado se muestran en 0) -->
+        <!-- TARJETAS KPI OPERATIVAS -->
         <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
             <div class="kpi-card">
                 <div class="kpi-title">Órdenes Activas</div>
@@ -123,7 +126,6 @@ if ($puedeOperar) {
             </div>
         </div>
 
-        <!-- TABLA DE ÓRDENES ACTIVAS EN PLANTA -->
         <div class="table-container" style="margin-top: 25px; margin-bottom: 40px;">
             <h3 style="color: #F8FAFC; margin-bottom: 15px; font-size: 16px;">Órdenes de Producción Activas (Para Ejecución)</h3>
             <table id="tablaOperativa" class="display" style="width: 100%; color: #CBD5E1;">
@@ -145,9 +147,7 @@ if ($puedeOperar) {
                             <td><?php echo htmlspecialchars($ord['cantidadPlanificada']); ?> uds</td>
                             <td><span style="color: #34D399; font-weight: bold;"><?php echo htmlspecialchars($ord['estado']); ?></span></td>
                             <td style="text-align: center;">
-                                <a href="/ProQuaris/controllers/ProduccionController.php?accion=listar" style="padding: 6px 12px; background: #3B82F6; color: white; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: bold;">
-                                    🔍 Ver Lotes / Inspeccionar
-                                </a>
+                                <a href="/ProQuaris/controllers/ProduccionController.php?accion=listar" style="padding: 6px 12px; background: #3B82F6; color: white; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: bold;">🔍 Ver Lotes / Inspeccionar</a>
                             </td>
                         </tr>
                         <?php endforeach; ?>
@@ -157,25 +157,20 @@ if ($puedeOperar) {
         </div>
     </main>
 </div>
-
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script>
 $(document).ready(function() {
     $('#tablaOperativa').DataTable({
+        pageLength: 5,
         language: {
-            processing: "Procesando...",
             search: "Buscar:",
             lengthMenu: "Mostrar _MENU_ registros",
             info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
-            infoEmpty: "Mostrando 0 a 0 de 0 registros",
-            infoFiltered: "(filtrado de _MAX_ registros en total)",
-            loadingRecords: "Cargando...",
-            zeroRecords: "No hay órdenes activas en este momento",
+            zeroRecords: "No hay órdenes activas",
             emptyTable: "No hay órdenes activas en planta o tu acceso aún no está aprobado",
             paginate: { first: "Primero", previous: "Anterior", next: "Siguiente", last: "Último" }
-        },
-        pageLength: 5
+        }
     });
 });
 </script>

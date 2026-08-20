@@ -13,8 +13,14 @@ if (!isset($_SESSION['usuario_nombre'])) {
     exit();
 }
 
+// Bloqueo de seguridad: Si no es Administrador, redirigir al panel de empleado
+$rolUsuario = $_SESSION['usuario_rol'] ?? 'Operario';
+if ($rolUsuario !== 'Administrador') {
+    header("Location: dashboard_empleado.php");
+    exit();
+}
+
 $nombreUsuario = $_SESSION['usuario_nombre'] ?? 'Usuario';
-$rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
 
 // Conexión a la base de datos
 require_once __DIR__ . '/../config/conexion.php';
@@ -114,7 +120,6 @@ try {
     <link rel="stylesheet" href="/ProQuaris/views/css/estilos-globales.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
-    <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .dataTables_wrapper .dataTables_length select,
@@ -149,9 +154,7 @@ try {
 </head>
 <body>
 <div class="dashboard-container">
-    
     <?php include __DIR__ . '/sidebar.php'; ?>
-
     <main class="main-content">
         <div class="top-bar">
             <div class="page-title">
@@ -161,7 +164,6 @@ try {
             <a href="/ProQuaris/controllers/OrdenController.php?accion=crear" class="btn-primary">+ Nueva Orden</a>
         </div>
 
-        <!-- FILA 1 DE TARJETAS KPI -->
         <div class="kpi-grid" style="grid-template-columns: repeat(5, 1fr);">
             <div class="kpi-card">
                 <div class="kpi-title">Órdenes Activas</div>
@@ -190,7 +192,6 @@ try {
             </div>
         </div>
 
-        <!-- FILA 2 DE TARJETAS KPI (Ajustada a 2 elementos principales) -->
         <div class="kpi-grid" style="grid-template-columns: repeat(2, 1fr); margin-top: 15px;">
             <div class="kpi-card">
                 <div class="kpi-title">Tasa de Defectos</div>
@@ -204,41 +205,28 @@ try {
             </div>
         </div>
 
-        <!-- SECCIÓN DE GRÁFICAS FILA 1 -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 25px;">
             <div style="background: #0F172A; padding: 20px; border-radius: 12px; border: 1px solid #1E293B;">
                 <h3 style="color: #F8FAFC; margin-bottom: 15px; font-size: 15px; font-weight: 600;">Tasa de Aprobación de Lotes</h3>
-                <div style="position: relative; height: 240px;">
-                    <canvas id="chartCalidad"></canvas>
-                </div>
+                <div style="position: relative; height: 240px;"><canvas id="chartCalidad"></canvas></div>
             </div>
-            
             <div style="background: #0F172A; padding: 20px; border-radius: 12px; border: 1px solid #1E293B;">
                 <h3 style="color: #F8FAFC; margin-bottom: 15px; font-size: 15px; font-weight: 600;">Unidades Correctas Producidas</h3>
-                <div style="position: relative; height: 240px;">
-                    <canvas id="chartProduccion"></canvas>
-                </div>
+                <div style="position: relative; height: 240px;"><canvas id="chartProduccion"></canvas></div>
             </div>
         </div>
 
-        <!-- SECCIÓN DE GRÁFICAS FILA 2 -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 25px;">
             <div style="background: #0F172A; padding: 20px; border-radius: 12px; border: 1px solid #1E293B;">
                 <h3 style="color: #F8FAFC; margin-bottom: 15px; font-size: 15px; font-weight: 600;">Evolución de Ganancias Netas por Mes</h3>
-                <div style="position: relative; height: 240px;">
-                    <canvas id="chartGanancias"></canvas>
-                </div>
+                <div style="position: relative; height: 240px;"><canvas id="chartGanancias"></canvas></div>
             </div>
-            
             <div style="background: #0F172A; padding: 20px; border-radius: 12px; border: 1px solid #1E293B;">
                 <h3 style="color: #F8FAFC; margin-bottom: 15px; font-size: 15px; font-weight: 600;">Rentabilidad Neta por Producto</h3>
-                <div style="position: relative; height: 240px;">
-                    <canvas id="chartProductos"></canvas>
-                </div>
+                <div style="position: relative; height: 240px;"><canvas id="chartProductos"></canvas></div>
             </div>
         </div>
         
-        <!-- TABLA CON EL HISTÓRICO DE PRODUCCIÓN REAL -->
         <div class="table-container" style="margin-top: 25px; margin-bottom: 40px;">
             <h3 style="color: #F8FAFC; margin-bottom: 15px; font-size: 16px;">Últimas Órdenes Completadas (Trazabilidad)</h3>
             <table id="tablaHistoricoDash" class="display" style="width: 100%; color: #CBD5E1;">
@@ -266,9 +254,7 @@ try {
                             <td style="font-weight: bold; color: #38BDF8;">$<?php echo number_format($h['impactoFinancieroNeto'], 0, ',', '.'); ?></td>
                             <td><?php echo htmlspecialchars($h['fechaCierre']); ?></td>
                             <td style="text-align: center;">
-                                <a href="/ProQuaris/controllers/CalidadController.php?accion=historial&idLote=<?php echo htmlspecialchars($h['idLote'] ?? 0); ?>" style="padding: 6px 10px; background: #3B82F6; color: white; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: bold;" title="Ver auditoría">
-                                    🔍 Ver
-                                </a>
+                                <a href="/ProQuaris/controllers/CalidadController.php?accion=historial&idLote=<?php echo htmlspecialchars($h['idLote'] ?? 0); ?>" style="padding: 6px 10px; background: #3B82F6; color: white; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: bold;">🔍 Ver</a>
                             </td>
                         </tr>
                         <?php endforeach; ?>
@@ -278,25 +264,20 @@ try {
         </div>
     </main>
 </div>
-
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script>
 $(document).ready(function() {
     $('#tablaHistoricoDash').DataTable({
+        pageLength: 5,
         language: {
-            processing: "Procesando...",
             search: "Buscar:",
             lengthMenu: "Mostrar _MENU_ registros",
             info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
-            infoEmpty: "Mostrando 0 a 0 de 0 registros",
-            infoFiltered: "(filtrado de _MAX_ registros en total)",
-            loadingRecords: "Cargando...",
-            zeroRecords: "No se encontraron resultados en el histórico",
-            emptyTable: "Aún no hay órdenes completadas en el histórico",
+            zeroRecords: "No se encontraron resultados",
+            emptyTable: "Aún no hay órdenes completadas",
             paginate: { first: "Primero", previous: "Anterior", next: "Siguiente", last: "Último" }
-        },
-        pageLength: 5
+        }
     });
 
     const makeGradient = (ctx, colorStart, colorEnd) => {
@@ -306,15 +287,6 @@ $(document).ready(function() {
         return gradient;
     };
 
-    Chart.defaults.plugins.tooltip.backgroundColor = '#1E293B';
-    Chart.defaults.plugins.tooltip.titleColor = '#F8FAFC';
-    Chart.defaults.plugins.tooltip.bodyColor = '#CBD5E1';
-    Chart.defaults.plugins.tooltip.borderColor = '#334155';
-    Chart.defaults.plugins.tooltip.borderWidth = 1;
-    Chart.defaults.plugins.tooltip.padding = 10;
-    Chart.defaults.plugins.tooltip.cornerRadius = 8;
-
-    // Gráfica 1: Donut
     const ctxCalidad = document.getElementById('chartCalidad').getContext('2d');
     new Chart(ctxCalidad, {
         type: 'doughnut',
@@ -323,123 +295,45 @@ $(document).ready(function() {
             datasets: [{
                 data: <?php echo json_encode(array_column($dataCalidad, 'total')); ?>,
                 backgroundColor: ['#34D399', '#EF4444', '#F59E0B'],
-                borderWidth: 0,
-                spacing: 6,
-                hoverOffset: 6
+                borderWidth: 0, spacing: 6
             }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '72%',
-            plugins: { legend: { position: 'bottom', labels: { color: '#94A3B8', font: { family: 'Inter', size: 12 }, boxWidth: 12, padding: 15 } } }
-        }
+        options: { responsive: true, maintainAspectRatio: false, cutout: '72%', plugins: { legend: { position: 'bottom', labels: { color: '#94A3B8' } } } }
     });
 
-    // Gráfica 2: Barras Producción
     const ctxProd = document.getElementById('chartProduccion').getContext('2d');
     const gradProd = makeGradient(ctxProd, 'rgba(59, 130, 246, 0.95)', 'rgba(30, 58, 138, 0.4)');
     new Chart(ctxProd, {
         type: 'bar',
         data: {
             labels: <?php echo json_encode(array_column($dataProduccion, 'mes')); ?>,
-            datasets: [{
-                label: 'Unidades Correctas',
-                data: <?php echo json_encode(array_column($dataProduccion, 'total')); ?>,
-                backgroundColor: gradProd,
-                borderRadius: 10,
-                maxBarThickness: 50
-            }]
+            datasets: [{ label: 'Unidades', data: <?php echo json_encode(array_column($dataProduccion, 'total')); ?>, backgroundColor: gradProd, borderRadius: 10 }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: { ticks: { color: '#94A3B8' }, grid: { color: 'rgba(255, 255, 255, 0.05)' } },
-                x: { ticks: { color: '#94A3B8' }, grid: { display: false } }
-            },
-            plugins: { legend: { display: false } }
-        }
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { ticks: { color: '#94A3B8' } }, x: { ticks: { color: '#94A3B8' } } }, plugins: { legend: { display: false } } }
     });
 
-    // Gráfica 3: Ganancias Netas Mensuales
     const ctxGan = document.getElementById('chartGanancias').getContext('2d');
     const gradGan = makeGradient(ctxGan, 'rgba(52, 211, 153, 0.6)', 'rgba(52, 211, 153, 0.0)');
     new Chart(ctxGan, {
         type: 'line',
         data: {
             labels: <?php echo json_encode(array_column($dataFinancieraMensual, 'mes')); ?>,
-            datasets: [{
-                label: 'Ganancia Neta ($)',
-                data: <?php echo json_encode(array_column($dataFinancieraMensual, 'ganancias')); ?>,
-                borderColor: '#34D399',
-                backgroundColor: gradGan,
-                fill: true,
-                tension: 0.3,
-                borderWidth: 3,
-                pointRadius: 6,
-                pointBackgroundColor: '#34D399',
-                pointBorderColor: '#FFFFFF',
-                pointBorderWidth: 2,
-                pointHoverRadius: 8
-            }]
+            datasets: [{ data: <?php echo json_encode(array_column($dataFinancieraMensual, 'ganancias')); ?>, borderColor: '#34D399', backgroundColor: gradGan, fill: true, tension: 0.3 }]
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: { ticks: { color: '#94A3B8' }, grid: { color: 'rgba(255, 255, 255, 0.05)' } },
-                x: { ticks: { color: '#94A3B8' }, grid: { display: false } }
-            },
-            plugins: { legend: { display: false } }
-        }
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { ticks: { color: '#94A3B8' } }, x: { ticks: { color: '#94A3B8' } } }, plugins: { legend: { display: false } } }
     });
 
-    // Gráfica 4: Rentabilidad por Producto
     const ctxProdR = document.getElementById('chartProductos').getContext('2d');
     const gradProdR = makeGradient(ctxProdR, 'rgba(168, 85, 247, 0.95)', 'rgba(88, 28, 135, 0.4)');
     new Chart(ctxProdR, {
         type: 'bar',
         data: {
             labels: <?php echo json_encode(array_column($dataProductos, 'productoNombre')); ?>,
-            datasets: [{
-                label: 'Impacto Financiero ($)',
-                data: <?php echo json_encode(array_column($dataProductos, 'totalGanancia')); ?>,
-                backgroundColor: gradProdR,
-                borderRadius: 10,
-                maxBarThickness: 45
-            }]
+            datasets: [{ data: <?php echo json_encode(array_column($dataProductos, 'totalGanancia')); ?>, backgroundColor: gradProdR, borderRadius: 10 }]
         },
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: { ticks: { color: '#94A3B8', font: { weight: 'bold' } }, grid: { display: false } },
-                x: { ticks: { color: '#94A3B8' }, grid: { color: 'rgba(255, 255, 255, 0.05)' } }
-            },
-            plugins: { legend: { display: false } }
-        }
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { y: { ticks: { color: '#94A3B8' } }, x: { ticks: { color: '#94A3B8' } } }, plugins: { legend: { display: false } } }
     });
 });
-
-window.addEventListener('pageshow', function (event) {
-    var isBackNavigation = event.persisted || 
-        (window.performance && window.performance.navigation && window.performance.navigation.type === 2) ||
-        (window.performance && window.performance.getEntriesByType && window.performance.getEntriesByType("navigation")[0]?.type === "back_forward");
-        
-    if (isBackNavigation) {
-        window.location.reload(true);
-    }
-});
 </script>
-<script type="module">
-    import Chatbot from "https://cdn.jsdelivr.net/npm/flowise-embed/dist/web.js"
-    Chatbot.init({
-        chatflowid: "50de36ef-a39c-4cfa-a795-e95952c78ebe",
-        apiHost: "https://cloud.flowiseai.com",
-    })
-</script>
-<script src="/ProQuaris/views/js/lote_admin.js"></script>
 </body>
 </html>
