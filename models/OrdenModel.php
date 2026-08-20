@@ -128,7 +128,7 @@ class OrdenModel {
 
             $sqlInfo = "SELECT o.idOrden, p.nombre AS productoNombre, o.cantidadPlanificada, 
                                (SELECT SUM(unidades_defectuosas) FROM registroinspeccion r JOIN lote lt ON r.FK_loteId = lt.idLote WHERE lt.FK_ordenId = o.idOrden) as totalDefectuosas,
-                               (SELECT SUM(impacto_financiero) FROM registroinspeccion r JOIN lote lt ON r.FK_loteId = lt.idLote WHERE lt.FK_ordenId = o.idOrden ORDER BY r.fecha DESC LIMIT 1) as ultimoImpacto
+                               (SELECT impacto_financiero FROM registroinspeccion r JOIN lote lt ON r.FK_loteId = lt.idLote WHERE lt.FK_ordenId = o.idOrden ORDER BY r.fecha DESC, r.idRI DESC LIMIT 1) as ultimoImpacto
                         FROM ordenproduccion o
                         LEFT JOIN productos p ON o.idProducto = p.idProducto
                         WHERE o.idOrden = ?";
@@ -153,14 +153,17 @@ class OrdenModel {
     }
 
     public function obtenerHistoricoCompleto() {
-        $stmt = $this->db->query("SELECT * FROM historico_produccion ORDER BY idHistorico DESC");
+        $sql = "SELECT h.*, l.idLote 
+                FROM historico_produccion h 
+                LEFT JOIN lote l ON h.idOrden = l.FK_ordenId 
+                ORDER BY h.idHistorico DESC";
+        $stmt = $this->db->query($sql);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     public function eliminar($id) {
         try {
             $this->db->beginTransaction();
-            // NOTA: Se removió el DELETE de historico_produccion para que el histórico no se borre al eliminar la orden.
             $this->db->prepare("DELETE FROM ordenproduccion WHERE idOrden = ?")->execute([$id]);
             $this->db->commit();
             return true;

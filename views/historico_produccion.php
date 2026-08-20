@@ -48,7 +48,11 @@ $historicos = $historicos ?? [];
                         <?php foreach ($historicos as $h): ?>
                         <tr>
                             <td>#<?php echo htmlspecialchars($h['idHistorico']); ?></td>
-                            <td><strong style="color: #38BDF8;">Orden #<?php echo htmlspecialchars($h['idOrden']); ?></strong></td>
+                            <td>
+                                <a href="/ProQuaris/controllers/CalidadController.php?accion=historial&idLote=<?php echo htmlspecialchars($h['idLote'] ?? 0); ?>" style="color: #38BDF8; text-decoration: none; font-weight: bold;" title="Ver historial de inspecciones de este lote">
+                                    Orden #<?php echo htmlspecialchars($h['idOrden']); ?> 🔍
+                                </a>
+                            </td>
                             <td style="font-weight: bold; color: #FFF;"><?php echo htmlspecialchars($h['productoNombre']); ?></td>
                             <td><?php echo htmlspecialchars($h['cantidadPlanificada']); ?> uds</td>
                             <td style="color: #34D399; font-weight: bold;"><?php echo htmlspecialchars($h['unidadesCorrectas']); ?> uds</td>
