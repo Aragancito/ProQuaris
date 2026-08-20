@@ -47,7 +47,7 @@ $inspecciones = $inspecciones ?? [];
                         <th style="padding: 12px;">Fecha y Hora / Orden</th>
                         <th style="padding: 12px;">Producto / Resultado</th>
                         <th style="padding: 12px; text-align: center;">Unidades (Correctas / Defectuosas)</th>
-                        <th style="padding: 12px;">Impacto Financiero (Dinámico vs Base Activa)</th>
+                        <th style="padding: 12px;">Impacto Financiero y Rendimiento</th>
                         <th style="padding: 12px;">Inspector y Observaciones</th>
                         <th style="padding: 12px; text-align: center;">Acciones</th>
                     </tr>
@@ -59,9 +59,11 @@ $inspecciones = $inspecciones ?? [];
                             $defectuosas = intval($row['unidades_defectuosas'] ?? 0);
                             $correctas = max(0, $unidadesBaseInspeccion - $defectuosas);
                             $impactoNeto = floatval($row['impacto_financiero'] ?? 0);
+                            $porcentaje = floatval($row['porcentaje_rendimiento'] ?? 0);
                             
                             $signo = ($impactoNeto > 0) ? '+' : (($impactoNeto < 0) ? '-' : '');
                             $colorImpacto = ($impactoNeto >= 0) ? '#34D399' : '#F87171';
+                            $colorPorcentaje = ($porcentaje < 0) ? '#F87171' : (($porcentaje > 0) ? '#38BDF8' : '#34D399');
                             
                             $precioVentaRef = floatval($row['precioUnitarioProducto'] ?? 0);
                             $valorBaseReferencia = $unidadesBaseInspeccion * $precioVentaRef;
@@ -90,8 +92,11 @@ $inspecciones = $inspecciones ?? [];
                                     <div style="font-weight: bold; font-size: 15px; color: <?php echo $colorImpacto; ?>;">
                                         <?php echo $signo . ' $' . number_format(abs($impactoNeto), 0, ',', '.'); ?>
                                     </div>
+                                    <div style="font-size: 12px; font-weight: bold; margin-top: 3px; color: <?php echo $colorPorcentaje; ?>;">
+                                        Rendimiento: <?php echo ($porcentaje > 0 ? '+' : '') . number_format($porcentaje, 2, ',', '.'); ?>%
+                                    </div>
                                     <div style="font-size: 11px; color: #94A3B8; margin-top: 3px;">
-                                        Base activa: $<?php echo number_format($valorBaseReferencia, 0, ',', '.'); ?> (<?php echo $unidadesBaseInspeccion; ?> uds disponibles)
+                                        Valor planificado: $<?php echo number_format($valorBaseReferencia, 0, ',', '.'); ?> (<?php echo $unidadesBaseInspeccion; ?> uds planificadas)
                                     </div>
                                 </td>
                                 <td style="padding: 14px; color: #94A3B8; font-size: 13px; max-width: 300px;">

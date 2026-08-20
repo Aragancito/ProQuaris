@@ -9,7 +9,14 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
 $idLote = $_GET['idLote'] ?? ($inspeccion['FK_loteId'] ?? 0);
 $insumosReales = $insumosReales ?? [];
 $lote = $lote ?? [];
-$cantidadProducidaOrden = $lote['cantidad'] ?? 0;
+
+// Unidades comprometidas por el lote. Es fijo: no cambia con las inspecciones.
+$cantidadPlanificadaLote = intval($lote['cantidadPlanificada'] ?? 0);
+if ($cantidadPlanificadaLote <= 0) $cantidadPlanificadaLote = intval($lote['cantidad'] ?? 0);
+
+// Defectuosas ya registradas en otras inspecciones de este lote.
+$defectuosasPrevias = intval($defectuosasPrevias ?? 0);
+$unidadesDisponibles = max(0, $cantidadPlanificadaLote - $defectuosasPrevias);
 
 $costoUnitarioProducto = $lote['precioVenta'] ?? $lote['precio_venta'] ?? $lote['precio'] ?? 0;
 
@@ -45,7 +52,7 @@ if ($esEdicion && strpos($observacionesTexto, 'Motivo: ') === 0) {
         <div class="top-bar">
             <div class="page-title">
                 <h1><?php echo $esEdicion ? 'Editar Auditoría e Inspección' : 'Auditoría de Insumos y Control de Calidad'; ?></h1>
-                <p>Lote #<?php echo $idLote; ?> | Producto: <?php echo htmlspecialchars($lote['producto'] ?? 'Producto'); ?> (Disponibles: <?php echo $cantidadProducidaOrden; ?> unidades)</p>
+                <p>Lote #<?php echo $idLote; ?> | Producto: <?php echo htmlspecialchars($lote['producto'] ?? 'Producto'); ?> (Planificadas: <?php echo $cantidadPlanificadaLote; ?> uds | Defectuosas ya registradas: <?php echo $defectuosasPrevias; ?> | Disponibles: <?php echo $unidadesDisponibles; ?>)</p>
             </div>
             <a href="/ProQuaris/controllers/CalidadController.php?accion=historial&idLote=<?php echo $idLote; ?>" style="padding:10px 20px; background:#475569; color:white; border-radius:8px; text-decoration:none; font-weight:500;">← Volver al Historial</a>
         </div>
@@ -56,7 +63,8 @@ if ($esEdicion && strpos($observacionesTexto, 'Motivo: ') === 0) {
                 <?php if ($esEdicion): ?>
                     <input type="hidden" name="idRI" value="<?php echo $idRI; ?>">
                 <?php endif; ?>
-                <input type="hidden" id="cantidadPlanificadaOrden" value="<?php echo $cantidadProducidaOrden; ?>">
+                <input type="hidden" id="cantidadPlanificadaOrden" value="<?php echo $cantidadPlanificadaLote; ?>">
+                <input type="hidden" id="defectuosasPrevias" value="<?php echo $defectuosasPrevias; ?>">
                 <input type="hidden" id="costoUnitarioFijo" value="<?php echo $costoUnitarioProducto; ?>">
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
@@ -87,11 +95,11 @@ if ($esEdicion && strpos($observacionesTexto, 'Motivo: ') === 0) {
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                         <div style="display: flex; flex-direction: column; gap: 6px;">
                             <label style="font-weight: 600; color: #CBD5E1; font-size: 14px;">Unidades Defectuosas:</label>
-                            <input type="number" id="unidadesDefectuosas" name="unidades_defectuosas" min="0" max="<?php echo $cantidadProducidaOrden; ?>" value="<?php echo $defectuosasActuales; ?>" required style="padding: 8px 12px; border-radius: 6px; border: 1px solid #475569; background: #0F172A; color: #F87171; font-weight: bold;">
+                            <input type="number" id="unidadesDefectuosas" name="unidades_defectuosas" min="0" max="<?php echo $unidadesDisponibles; ?>" value="<?php echo $defectuosasActuales; ?>" required style="padding: 8px 12px; border-radius: 6px; border: 1px solid #475569; background: #0F172A; color: #F87171; font-weight: bold;">
                         </div>
                         <div style="display: flex; flex-direction: column; gap: 6px;">
                             <label style="font-weight: 600; color: #CBD5E1; font-size: 14px;">Unidades Finales Correctas:</label>
-                            <input type="text" id="unidadesFinalesReales" value="<?php echo max(0, $cantidadProducidaOrden - $defectuosasActuales); ?>" readonly style="padding: 8px 12px; border-radius: 6px; border: 1px solid #475569; background: #0F172A; color: #34D399; font-weight: bold; cursor: not-allowed;">
+                            <input type="text" id="unidadesFinalesReales" value="<?php echo max(0, $cantidadPlanificadaLote - $defectuosasPrevias - $defectuosasActuales); ?>" readonly style="padding: 8px 12px; border-radius: 6px; border: 1px solid #475569; background: #0F172A; color: #34D399; font-weight: bold; cursor: not-allowed;">
                         </div>
                     </div>
                     <div style="font-size: 12px; color: #94A3B8; border-top: 1px dashed #334155; padding-top: 8px; display: flex; justify-content: space-between;">
@@ -108,41 +116,51 @@ if ($esEdicion && strpos($observacionesTexto, 'Motivo: ') === 0) {
                 <!-- Sección de Auditoría Detallada por Insumo -->
                 <div style="border-top: 1px solid #334155; padding-top: 15px; margin-top: 5px;">
                     <h3 style="font-size: 15px; color: #F8FAFC; margin-bottom: 5px;">Detalle de Insumos (Plan vs Real)</h3>
-                    <p style="font-size: 12px; color: #94A3B8; margin-bottom: 12px;">Modifica el consumo real de cualquier insumo de forma fluida (positivos, ceros o negativos).</p>
+                    <p style="font-size: 12px; color: #94A3B8; margin-bottom: 12px;">El plan es el material necesario para TODO el lote (receta de 1 unidad x unidades planificadas). Escribe cuánto se consumió realmente (nunca un valor negativo).</p>
 
                     <div style="display: flex; flex-direction: column; gap: 12px;">
                         <?php if (!empty($insumosReales)): ?>
                             <?php foreach ($insumosReales as $index => $ins): 
-                                $cantPlanificadaEntera = round($ins['cantidadRequerida']);
-                                $costoUnitarioBase = ($cantPlanificadaEntera != 0) ? (abs($ins['costoInsumo']) / abs($cantPlanificadaEntera)) : abs($ins['costoInsumo']);
+                                $cantPlanificadaLoteInsumo = abs(floatval($ins['cantidadRequerida'] ?? 0));
+                                $costoUnitarioBase = floatval($ins['costoUnitario'] ?? 0);
+                                if ($costoUnitarioBase == 0 && $cantPlanificadaLoteInsumo != 0) {
+                                    $costoUnitarioBase = abs(floatval($ins['costoInsumo'] ?? 0)) / $cantPlanificadaLoteInsumo;
+                                }
+                                $cantPorUnidad = floatval($ins['cantidadPorUnidad'] ?? 0);
+                                if ($cantPorUnidad == 0 && $cantidadPlanificadaLote > 0) {
+                                    $cantPorUnidad = $cantPlanificadaLoteInsumo / $cantidadPlanificadaLote;
+                                }
                                 $cantPorEmpaque = $ins['cantidad_por_empaque'] ?? 1;
-                                $cantRealActual = $ins['cantidadReal'] ?? $cantPlanificadaEntera;
+                                $cantRealActual = ($ins['cantidadConsumida'] !== null && $ins['cantidadConsumida'] !== '')
+                                    ? floatval($ins['cantidadConsumida'])
+                                    : $cantPlanificadaLoteInsumo;
                             ?>
                                 <div class="insumo-row" style="background: #0F172A; padding: 14px; border-radius: 8px; border: 1px solid #334155; display: flex; flex-direction: column; gap: 8px;"
                                      data-empaque="<?php echo $cantPorEmpaque; ?>"
-                                     data-planificada="<?php echo $cantPlanificadaEntera; ?>"
-                                     data-unit-cost="<?php echo $costoUnitarioBase; ?>"
-                                     data-costo-base="<?php echo round($ins['costoInsumo']); ?>">
+                                     data-planificada="<?php echo $cantPlanificadaLoteInsumo; ?>"
+                                     data-por-unidad="<?php echo $cantPorUnidad; ?>"
+                                     data-unit-cost="<?php echo $costoUnitarioBase; ?>">
                                     
                                     <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px; align-items: center;">
                                         <div>
                                             <span style="font-size: 10px; color: #94A3B8; display: block;">Insumo:</span>
-                                            <input type="text" name="insumos[<?php echo $index; ?>][nombre]" value="<?php echo htmlspecialchars($ins['insumo_nombre'] ?? $ins['nombre'] ?? ''); ?>" readonly style="width: 100%; padding: 8px; background: #1E293B; border: 1px solid #334155; color: #CBD5E1; border-radius: 6px; font-weight: bold;">
+                                            <input type="hidden" name="insumos[<?php echo $index; ?>][id]" value="<?php echo intval($ins['idLoteInsumo'] ?? 0); ?>">
+                                            <input type="text" value="<?php echo htmlspecialchars($ins['insumo_nombre'] ?? $ins['nombre'] ?? ''); ?>" readonly style="width: 100%; padding: 8px; background: #1E293B; border: 1px solid #334155; color: #CBD5E1; border-radius: 6px; font-weight: bold;">
                                         </div>
                                         
                                         <div>
-                                            <span style="font-size: 10px; color: #94A3B8; display: block;">Planificado:</span>
-                                            <input type="text" value="<?php echo $cantPlanificadaEntera . ' ' . ($ins['unidad'] ?? ''); ?>" readonly style="width: 100%; padding: 8px; background: #1E293B; border: 1px solid #334155; color: #94A3B8; border-radius: 6px; font-size: 11px;">
+                                            <span style="font-size: 10px; color: #94A3B8; display: block;">Planificado (lote):</span>
+                                            <input type="text" value="<?php echo rtrim(rtrim(number_format($cantPlanificadaLoteInsumo, 2, '.', ''), '0'), '.') . ' ' . ($ins['unidad'] ?? ''); ?>" title="<?php echo rtrim(rtrim(number_format($cantPorUnidad, 2, '.', ''), '0'), '.'); ?> por unidad x <?php echo $cantidadPlanificadaLote; ?> unidades" readonly style="width: 100%; padding: 8px; background: #1E293B; border: 1px solid #334155; color: #94A3B8; border-radius: 6px; font-size: 11px;">
                                         </div>
 
                                         <div>
-                                            <span style="font-size: 10px; color: #38BDF8; display: block;">Cantidad Real:</span>
-                                            <input type="number" step="1" name="insumos[<?php echo $index; ?>][cantidad]" value="<?php echo $cantRealActual; ?>" placeholder="Cant. real" class="input-cantidad" required style="width: 100%; padding: 8px; background: #1E293B; border: 1px solid #334155; color: white; border-radius: 6px;">
+                                            <span style="font-size: 10px; color: #38BDF8; display: block;">Consumo Real:</span>
+                                            <input type="number" step="1" min="0" name="insumos[<?php echo $index; ?>][cantidad]" value="<?php echo rtrim(rtrim(number_format($cantRealActual, 2, '.', ''), '0'), '.'); ?>" placeholder="Cant. real" class="input-cantidad" required style="width: 100%; padding: 8px; background: #1E293B; border: 1px solid #334155; color: white; border-radius: 6px;">
                                         </div>
 
                                         <div>
                                             <span style="font-size: 10px; color: #34D399; display: block;">Costo Real:</span>
-                                            <input type="number" step="1" name="insumos[<?php echo $index; ?>][costo]" value="<?php echo round(abs($ins['costoInsumo'])); ?>" readonly class="input-costo-total" style="width: 100%; padding: 8px; background: #1E293B; border: 1px solid #334155; color: #34D399; font-weight: bold; border-radius: 6px; cursor: not-allowed;">
+                                            <input type="number" step="1" value="<?php echo round($cantRealActual * $costoUnitarioBase); ?>" readonly class="input-costo-total" style="width: 100%; padding: 8px; background: #1E293B; border: 1px solid #334155; color: #34D399; font-weight: bold; border-radius: 6px; cursor: not-allowed;">
                                         </div>
                                     </div>
 
@@ -150,8 +168,6 @@ if ($esEdicion && strpos($observacionesTexto, 'Motivo: ') === 0) {
                                         Estado analítico: <span class="texto-estado" style="color: #34D399;">Consumo exacto al planificado</span>
                                     </div>
 
-                                    <input type="hidden" name="insumos[<?php echo $index; ?>][unidad]" value="<?php echo htmlspecialchars($ins['unidad'] ?? ''); ?>">
-                                    <input type="hidden" name="insumos[<?php echo $index; ?>][cantidad_por_empaque]" value="<?php echo $cantPorEmpaque; ?>">
                                 </div>
                             <?php endforeach; ?>
                         <?php else: ?>
@@ -163,11 +179,11 @@ if ($esEdicion && strpos($observacionesTexto, 'Motivo: ') === 0) {
                 <!-- Resumen Financiero Total del Lote -->
                 <div style="background: #0F172A; padding: 15px; border-radius: 8px; border: 1px solid #334155; display: flex; flex-direction: column; gap: 8px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #94A3B8;">
-                        <span>Valor Total Planificado del Lote (<?php echo $cantidadProducidaOrden; ?> uds):</span>
+                        <span>Valor Total Planificado del Lote (<?php echo $cantidadPlanificadaLote; ?> uds):</span>
                         <span id="valorBaseLote" style="font-weight: bold; color: #38BDF8;">$0</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #94A3B8; border-top: 1px dashed #334155; padding-top: 6px;">
-                        <span>Ajuste por Insumos (Sobrantes / Faltantes):</span>
+                        <span>Ajuste por Insumos (sobrante = ahorro / exceso = costo):</span>
                         <span id="balanceInsumosTotal" style="font-weight: bold; color: #34D399;">$0</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #94A3B8; border-top: 1px dashed #334155; padding-top: 6px;">
@@ -177,6 +193,10 @@ if ($esEdicion && strpos($observacionesTexto, 'Motivo: ') === 0) {
                     <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #334155; padding-top: 8px;">
                         <span style="font-weight: 600; color: #CBD5E1; font-size: 14px;">Impacto Financiero Neto del Lote:</span>
                         <span id="impactoFinancieroNeto" style="font-size: 18px; font-weight: bold; color: #34D399;">$0</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #334155; padding-top: 6px;">
+                        <span style="font-weight: 600; color: #CBD5E1; font-size: 14px;">Rendimiento del Lote (ganado / perdido):</span>
+                        <span id="porcentajeRendimiento" style="font-size: 16px; font-weight: bold; color: #34D399;">0%</span>
                     </div>
                 </div>
 
@@ -198,8 +218,10 @@ if ($esEdicion && strpos($observacionesTexto, 'Motivo: ') === 0) {
     const spanValorBaseLote = document.getElementById('valorBaseLote');
     const lblCostoUnitario = document.getElementById('lblCostoUnitario');
     const planificadaOrden = parseFloat(document.getElementById('cantidadPlanificadaOrden').value) || 1;
+    const defectuosasPrevias = parseInt(document.getElementById('defectuosasPrevias').value) || 0;
     const costoUnitarioBaseFijo = parseFloat(document.getElementById('costoUnitarioFijo').value) || 0;
     const spanImpactoNeto = document.getElementById('impactoFinancieroNeto');
+    const spanPorcentaje = document.getElementById('porcentajeRendimiento');
 
     lblCostoUnitario.textContent = "$" + Math.round(costoUnitarioBaseFijo).toLocaleString('es-CO');
 
@@ -211,40 +233,38 @@ if ($esEdicion && strpos($observacionesTexto, 'Motivo: ') === 0) {
 
         document.querySelectorAll('.insumo-row').forEach(row => {
             const inputCant = row.querySelector('.input-cantidad');
-            let cantReal = parseInt(inputCant.value);
-            if (isNaN(cantReal)) cantReal = 0;
+            let cantReal = parseFloat(inputCant.value);
+            if (isNaN(cantReal) || cantReal < 0) cantReal = 0;
 
             const unitCost = parseFloat(row.getAttribute('data-unit-cost')) || 0;
             const cantPlanificada = parseFloat(row.getAttribute('data-planificada')) || 0;
             
             let costoTotalInsumoField = row.querySelector('.input-costo-total');
-            let costoTotalInsumo = Math.round(Math.abs(cantReal) * unitCost);
-            costoTotalInsumoField.value = costoTotalInsumo;
+            costoTotalInsumoField.value = Math.round(cantReal * unitCost);
             
-            let diferenciaUnidades = cantReal - cantPlanificada;
-            let diferenciaDinero = diferenciaUnidades * unitCost;
-            
-            balanceInsumosTotal += diferenciaDinero;
+            // Positivo = sobró material (ahorro). Negativo = se gastó de más (costo extra).
+            balanceInsumosTotal += (cantPlanificada - cantReal) * unitCost;
         });
 
         if (balanceInsumosTotal > 0) {
-            spanBalanceInsumos.textContent = "+$" + Math.round(balanceInsumosTotal).toLocaleString('es-CO') + " (Sobrante / Exceso)";
+            spanBalanceInsumos.textContent = "+$" + Math.round(balanceInsumosTotal).toLocaleString('es-CO') + " (Sobró material / Ahorro)";
             spanBalanceInsumos.style.color = '#38BDF8';
         } else if (balanceInsumosTotal < 0) {
-            spanBalanceInsumos.textContent = "-$" + Math.abs(Math.round(balanceInsumosTotal)).toLocaleString('es-CO') + " (Faltante / Ahorro)";
+            spanBalanceInsumos.textContent = "-$" + Math.abs(Math.round(balanceInsumosTotal)).toLocaleString('es-CO') + " (Se gastó de más)";
             spanBalanceInsumos.style.color = '#F87171';
         } else {
             spanBalanceInsumos.textContent = "$0";
             spanBalanceInsumos.style.color = '#34D399';
         }
 
-        let defectuosas = parseInt(inputDefectuosas.value) || 0;
-        let perdidaDefectos = Math.round(defectuosas * costoUnitarioBaseFijo);
+        // Se cuentan TODAS las defectuosas del lote (las de antes + las de ahora),
+        // siempre sobre la cantidad planificada, para no descontarlas dos veces.
+        const defectuosasTotales = (parseInt(inputDefectuosas.value) || 0) + defectuosasPrevias;
+        const perdidaDefectos = Math.round(defectuosasTotales * costoUnitarioBaseFijo);
         spanCostoDefectuosas.textContent = "$" + perdidaDefectos.toLocaleString('es-CO');
         spanResumenDefectuosas.textContent = "-$" + perdidaDefectos.toLocaleString('es-CO');
 
-        // Cálculo correcto: Base - Defectos + Insumos
-        let impactoNeto = valorBaseTotalLote + balanceInsumosTotal - perdidaDefectos;
+        const impactoNeto = valorBaseTotalLote + balanceInsumosTotal - perdidaDefectos;
 
         if (impactoNeto < 0) {
             spanImpactoNeto.textContent = "-$" + Math.abs(Math.round(impactoNeto)).toLocaleString('es-CO');
@@ -253,49 +273,78 @@ if ($esEdicion && strpos($observacionesTexto, 'Motivo: ') === 0) {
             spanImpactoNeto.textContent = "$" + Math.round(impactoNeto).toLocaleString('es-CO');
             spanImpactoNeto.style.color = '#34D399';
         }
+
+        const porcentaje = (valorBaseTotalLote !== 0)
+            ? ((impactoNeto - valorBaseTotalLote) / valorBaseTotalLote) * 100
+            : 0;
+        const diferencia = Math.round(impactoNeto - valorBaseTotalLote);
+
+        if (diferencia < 0) {
+            spanPorcentaje.textContent = porcentaje.toFixed(2) + "% (pierde $" + Math.abs(diferencia).toLocaleString('es-CO') + ")";
+            spanPorcentaje.style.color = '#F87171';
+        } else if (diferencia > 0) {
+            spanPorcentaje.textContent = "+" + porcentaje.toFixed(2) + "% (ahorra $" + diferencia.toLocaleString('es-CO') + ")";
+            spanPorcentaje.style.color = '#38BDF8';
+        } else {
+            spanPorcentaje.textContent = "0% (sale igual a lo planificado)";
+            spanPorcentaje.style.color = '#34D399';
+        }
     }
+
+    const maximoDefectuosas = Math.max(0, planificadaOrden - defectuosasPrevias);
 
     inputDefectuosas.addEventListener('input', () => {
         let defectuosas = parseInt(inputDefectuosas.value) || 0;
         if (defectuosas < 0) defectuosas = 0;
-        if (defectuosas > planificadaOrden) defectuosas = planificadaOrden;
+        if (defectuosas > maximoDefectuosas) defectuosas = maximoDefectuosas;
         inputDefectuosas.value = defectuosas;
         
-        const finales = planificadaOrden - defectuosas;
-        inputFinalesReales.value = finales + " unidades correctas (" + defectuosas + " defectuosas)";
+        const totales = defectuosas + defectuosasPrevias;
+        const finales = planificadaOrden - totales;
+        inputFinalesReales.value = finales + " unidades correctas (" + totales + " defectuosas en total)";
         
         actualizarCalculosGlobales();
     });
 
+    function actualizarEstadoInsumo(row) {
+        const inputCant = row.querySelector('.input-cantidad');
+        let cantReal = parseFloat(inputCant.value);
+        if (isNaN(cantReal) || cantReal < 0) cantReal = 0;
+
+        const cantPlanificada = parseFloat(row.getAttribute('data-planificada')) || 0;
+        const porUnidad = parseFloat(row.getAttribute('data-por-unidad')) || 0;
+        const unitCost = parseFloat(row.getAttribute('data-unit-cost')) || 0;
+        const spanEstado = row.querySelector('.texto-estado');
+
+        const diferencia = cantReal - cantPlanificada;
+        const valorDiferencia = Math.round(Math.abs(diferencia) * unitCost);
+
+        if (diferencia === 0) {
+            spanEstado.style.color = '#34D399';
+            spanEstado.textContent = 'Consumo exacto al planificado';
+        } else if (diferencia > 0) {
+            spanEstado.style.color = '#F87171';
+            spanEstado.textContent = `Se gastó de más: ${diferencia} unidades por encima del plan (costo extra: -$${valorDiferencia.toLocaleString('es-CO')})`;
+        } else {
+            const sobrantes = Math.abs(diferencia);
+            const unidadesEquivalentes = (porUnidad > 0) ? Math.floor(sobrantes / porUnidad) : 0;
+            const detalleUnidades = (unidadesEquivalentes > 0)
+                ? ` — equivale al material de ${unidadesEquivalentes} unidad(es)`
+                : '';
+            spanEstado.style.color = '#38BDF8';
+            spanEstado.textContent = `Sobró material: ${sobrantes} unidades sin usar (ahorro: +$${valorDiferencia.toLocaleString('es-CO')})${detalleUnidades}`;
+        }
+    }
+
     document.addEventListener('input', (e) => {
-        if(e.target.classList.contains('input-cantidad')) {
-            const row = e.target.closest('.insumo-row');
-            const inputCant = e.target;
-            let cantReal = parseInt(inputCant.value);
-            if (isNaN(cantReal)) cantReal = 0;
-
-            const cantPlanificada = parseFloat(row.getAttribute('data-planificada')) || 0;
-            const unitCost = parseFloat(row.getAttribute('data-unit-cost')) || 0;
-            const spanEstado = row.querySelector('.texto-estado');
-
-            const diferenciaUnidades = cantReal - cantPlanificada;
-            if (diferenciaUnidades === 0) {
-                spanEstado.style.color = '#34D399';
-                spanEstado.textContent = 'Consumo exacto al planificado';
-            } else if (diferenciaUnidades > 0) {
-                const valorSobrante = Math.round(diferenciaUnidades * unitCost);
-                spanEstado.style.color = '#38BDF8';
-                spanEstado.textContent = `¡Sobra material! Exceso de +${diferenciaUnidades} unidades (Sobrante: +$${valorSobrante.toLocaleString('es-CO')})`;
-            } else {
-                const unidadesFaltantes = Math.abs(diferenciaUnidades);
-                const perdidaFaltante = Math.round(unidadesFaltantes * unitCost);
-                spanEstado.style.color = '#F87171';
-                spanEstado.textContent = `¡Falta material! Faltaron ${unidadesFaltantes} unidades en total (Pérdida/Diferencia: -$${perdidaFaltante.toLocaleString('es-CO')})`;
-            }
+        if (e.target.classList.contains('input-cantidad')) {
+            if (parseFloat(e.target.value) < 0) e.target.value = 0;
+            actualizarEstadoInsumo(e.target.closest('.insumo-row'));
             actualizarCalculosGlobales();
         }
     });
 
+    document.querySelectorAll('.insumo-row').forEach(actualizarEstadoInsumo);
     actualizarCalculosGlobales();
 </script>
 </body>
