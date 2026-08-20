@@ -24,21 +24,11 @@ class CalidadController {
         }
     }
 
-    // Unidades que el lote se comprometió a producir. Es un valor fijo:
-    // no se reduce con las inspecciones, para no castigar dos veces las mismas unidades.
     private function unidadesPlanificadas($lote) {
         $planificadas = intval($lote['cantidadPlanificada'] ?? 0);
         return ($planificadas > 0) ? $planificadas : intval($lote['cantidad'] ?? 0);
     }
 
-    // Un solo lugar donde se calcula la plata del lote, para que registrar y editar
-    // siempre den el mismo resultado.
-    //
-    //   valor planificado = unidades planificadas x precio de venta
-    //   ajuste de insumos = (planificado - consumido) x costo unitario del insumo
-    //                        (positivo = sobró material, negativo = se gastó de más)
-    //   pérdida por defectos = defectuosas acumuladas x precio de venta
-    //   impacto neto = valor planificado + ajuste de insumos - pérdida por defectos
     private function calcularImpacto($lote, $insumosPlan, $insumosEnviados, $defectuosasTotales) {
         $planificadas = $this->unidadesPlanificadas($lote);
         $precioUnitario = floatval($lote['precioVenta'] ?? $lote['precio_venta'] ?? $lote['precio'] ?? 0);
@@ -94,16 +84,22 @@ class CalidadController {
     private function guardar() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $idLote = $_POST['idLote'];
-            $unidadesDefectuosas = intval($_POST['unidades_defectuosas'] ?? 0);
             $insumosEnviados = $_POST['insumos'] ?? [];
-
+            
             $lote = $this->produccionModel->obtenerLotePorId($idLote);
             $insumosPlan = $this->produccionModel->obtenerInsumosRealesPorLote($idLote);
             $planificadas = $this->unidadesPlanificadas($lote);
-
             $defectuosasPrevias = $this->model->sumarDefectuosasPorLote($idLote);
-            $defectuosasTotales = min($planificadas, $defectuosasPrevias + $unidadesDefectuosas);
-            $unidadesDefectuosas = max(0, $defectuosasTotales - $defectuosasPrevias);
+
+            // SE TOMAN LOS VALORES EXACTOS DEL FORMULARIO
+            $unidadesCorrectas = intval($_POST['unidades_correctas'] ?? 0);
+            $unidadesDefectuosas = intval($_POST['unidades_defectuosas'] ?? 0);
+            
+            // La base de esta inspección es exclusivamente lo que el operario evaluó hoy (ej: 191 + 0 = 191)
+            $unidadesBaseInspeccion = $unidadesCorrectas + $unidadesDefectuosas;
+
+            // Las defectuosas totales (históricas + actuales) sirven solo para el cálculo de impacto financiero
+            $defectuosasTotales = $defectuosasPrevias + $unidadesDefectuosas;
 
             $calculo = $this->calcularImpacto($lote, $insumosPlan, $insumosEnviados, $defectuosasTotales);
 
@@ -121,7 +117,7 @@ class CalidadController {
                 $unidadesDefectuosas, 
                 $_SESSION['usuario_id'] ?? 1,
                 $calculo['impactoNeto'],
-                $planificadas,
+                $unidadesBaseInspeccion, // <- AQUÍ ENVIAMOS LA BASE REAL (191) EN VEZ DEL TOTAL (200)
                 $calculo['porcentaje']
             );
             
@@ -149,17 +145,20 @@ class CalidadController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $idRI = $_POST['idRI'];
             $idLote = $_POST['idLote'];
-            $unidadesDefectuosas = intval($_POST['unidades_defectuosas'] ?? 0);
-
             $insumosEnviados = $_POST['insumos'] ?? [];
 
             $lote = $this->produccionModel->obtenerLotePorId($idLote);
             $insumosPlan = $this->produccionModel->obtenerInsumosRealesPorLote($idLote);
             $planificadas = $this->unidadesPlanificadas($lote);
-
             $defectuosasOtrasInspecciones = $this->model->sumarDefectuosasPorLote($idLote, $idRI);
-            $defectuosasTotales = min($planificadas, $defectuosasOtrasInspecciones + $unidadesDefectuosas);
-            $unidadesDefectuosas = max(0, $defectuosasTotales - $defectuosasOtrasInspecciones);
+
+            // SE TOMAN LOS VALORES EXACTOS DEL FORMULARIO
+            $unidadesCorrectas = intval($_POST['unidades_correctas'] ?? 0);
+            $unidadesDefectuosas = intval($_POST['unidades_defectuosas'] ?? 0);
+            
+            $unidadesBaseInspeccion = $unidadesCorrectas + $unidadesDefectuosas; 
+
+            $defectuosasTotales = $defectuosasOtrasInspecciones + $unidadesDefectuosas;
 
             $calculo = $this->calcularImpacto($lote, $insumosPlan, $insumosEnviados, $defectuosasTotales);
 
@@ -176,7 +175,7 @@ class CalidadController {
                 $_POST['observaciones'],
                 $unidadesDefectuosas,
                 $calculo['impactoNeto'],
-                $planificadas,
+                $unidadesBaseInspeccion, // <- AQUÍ ENVIAMOS LA BASE REAL
                 $calculo['porcentaje']
             );
 

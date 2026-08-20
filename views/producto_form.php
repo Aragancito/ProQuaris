@@ -9,7 +9,8 @@ $insumos = $insumos ?? [];
 $action = $action ?? "/ProQuaris/controllers/ProductoController.php?accion=crear";
 
 $envase_opciones = ['Unidades', 'Frascos', 'Tubos', 'Paquetes', 'Cajas', 'Rollo'];
-$unidad_contenido_opciones = ['ml', 'L', 'g', 'kg', 'mg', 'unidades'];
+// Modificación realizada aquí:
+$unidad_contenido_opciones = ['ml', 'L', 'cm', 'm', 'g', 'kg', 'mg', 'unidades'];
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -116,7 +117,6 @@ $unidad_contenido_opciones = ['ml', 'L', 'g', 'kg', 'mg', 'unidades'];
         document.getElementById('precioVenta').value = Math.round(costoTotalInsumos + plusvalia);
     }
 
-    // Lógica para multiplicar cantidad por valor unitario automáticamente
     document.addEventListener('input', (e) => {
         const row = e.target.closest('.insumo-row');
         
@@ -128,13 +128,11 @@ $unidad_contenido_opciones = ['ml', 'L', 'g', 'kg', 'mg', 'unidades'];
             let costoTotal = parseFloat(inputCosto.value) || 0;
 
             if (e.target.classList.contains('input-cantidad')) {
-                // Si cambia la cantidad, calculamos el costo usando el precio unitario guardado
                 let unitPrice = parseFloat(row.dataset.unitPrice) || (cantidad > 0 ? costoTotal / cantidad : 0);
                 if (cantidad > 0 && unitPrice > 0) {
                     inputCosto.value = Math.round(cantidad * unitPrice);
                 }
             } else if (e.target.classList.contains('input-costo')) {
-                // Si el usuario cambia el costo directamente, actualizamos el precio unitario base
                 if (cantidad > 0) {
                     row.dataset.unitPrice = costoTotal / cantidad;
                 }

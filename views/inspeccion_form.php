@@ -10,20 +10,18 @@ $idLote = $_GET['idLote'] ?? ($inspeccion['FK_loteId'] ?? 0);
 $insumosReales = $insumosReales ?? [];
 $lote = $lote ?? [];
 
-// Unidades comprometidas por el lote. Es fijo: no cambia con las inspecciones.
 $cantidadPlanificadaLote = intval($lote['cantidadPlanificada'] ?? 0);
 if ($cantidadPlanificadaLote <= 0) $cantidadPlanificadaLote = intval($lote['cantidad'] ?? 0);
 
-// Defectuosas ya registradas en otras inspecciones de este lote.
 $defectuosasPrevias = intval($defectuosasPrevias ?? 0);
 $unidadesDisponibles = max(0, $cantidadPlanificadaLote - $defectuosasPrevias);
-
 $costoUnitarioProducto = $lote['precioVenta'] ?? $lote['precio_venta'] ?? $lote['precio'] ?? 0;
 
 $esEdicion = isset($inspeccion) && !empty($inspeccion);
 $idRI = $esEdicion ? ($inspeccion['idRI'] ?? $inspeccion['id'] ?? 0) : 0;
 $resultadoActual = $esEdicion ? ($inspeccion['resultado'] ?? 'Aprobado') : 'Aprobado';
 $defectuosasActuales = $esEdicion ? intval($inspeccion['unidades_defectuosas'] ?? 0) : 0;
+$correctasActuales = max(0, $cantidadPlanificadaLote - $defectuosasPrevias - $defectuosasActuales);
 
 $observacionesTexto = $esEdicion ? ($inspeccion['observaciones'] ?? '') : '';
 $motivoActual = 'Cumple especificaciones estándar';
@@ -52,7 +50,7 @@ if ($esEdicion && strpos($observacionesTexto, 'Motivo: ') === 0) {
         <div class="top-bar">
             <div class="page-title">
                 <h1><?php echo $esEdicion ? 'Editar Auditoría e Inspección' : 'Auditoría de Insumos y Control de Calidad'; ?></h1>
-                <p>Lote #<?php echo $idLote; ?> | Producto: <?php echo htmlspecialchars($lote['producto'] ?? 'Producto'); ?> (Planificadas: <?php echo $cantidadPlanificadaLote; ?> uds | Defectuosas ya registradas: <?php echo $defectuosasPrevias; ?> | Disponibles: <?php echo $unidadesDisponibles; ?>)</p>
+                <p>Lote #<?php echo $idLote; ?> | Producto: <?php echo htmlspecialchars($lote['producto'] ?? 'Producto'); ?> (Planificadas: <?php echo $cantidadPlanificadaLote; ?> uds | Defectuosas previas: <?php echo $defectuosasPrevias; ?> | Disponibles: <?php echo $unidadesDisponibles; ?>)</p>
             </div>
             <a href="/ProQuaris/controllers/CalidadController.php?accion=historial&idLote=<?php echo $idLote; ?>" style="padding:10px 20px; background:#475569; color:white; border-radius:8px; text-decoration:none; font-weight:500;">← Volver al Historial</a>
         </div>
@@ -94,17 +92,18 @@ if ($esEdicion && strpos($observacionesTexto, 'Motivo: ') === 0) {
                 <div style="display: flex; flex-direction: column; gap: 10px; background: #1E293B; padding: 15px; border-radius: 8px; border: 1px solid #334155;">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                         <div style="display: flex; flex-direction: column; gap: 6px;">
-                            <label style="font-weight: 600; color: #CBD5E1; font-size: 14px;">Unidades Defectuosas:</label>
+                            <label style="font-weight: 600; color: #CBD5E1; font-size: 14px;">Unidades Defectuosas (Pérdidas):</label>
                             <input type="number" id="unidadesDefectuosas" name="unidades_defectuosas" min="0" max="<?php echo $unidadesDisponibles; ?>" value="<?php echo $defectuosasActuales; ?>" required style="padding: 8px 12px; border-radius: 6px; border: 1px solid #475569; background: #0F172A; color: #F87171; font-weight: bold;">
                         </div>
                         <div style="display: flex; flex-direction: column; gap: 6px;">
                             <label style="font-weight: 600; color: #CBD5E1; font-size: 14px;">Unidades Finales Correctas:</label>
-                            <input type="text" id="unidadesFinalesReales" value="<?php echo max(0, $cantidadPlanificadaLote - $defectuosasPrevias - $defectuosasActuales); ?>" readonly style="padding: 8px 12px; border-radius: 6px; border: 1px solid #475569; background: #0F172A; color: #34D399; font-weight: bold; cursor: not-allowed;">
+                            <!-- CORRECCIÓN AQUÍ: Name asignado, type number y ya no es readonly -->
+                            <input type="number" id="unidadesFinalesReales" name="unidades_correctas" min="0" max="<?php echo $unidadesDisponibles; ?>" value="<?php echo $correctasActuales; ?>" required style="padding: 8px 12px; border-radius: 6px; border: 1px solid #475569; background: #0F172A; color: #34D399; font-weight: bold;">
                         </div>
                     </div>
                     <div style="font-size: 12px; color: #94A3B8; border-top: 1px dashed #334155; padding-top: 8px; display: flex; justify-content: space-between;">
                         <span>Costo de producción por unidad: <strong id="lblCostoUnitario" style="color: #38BDF8;">$<?php echo number_format($costoUnitarioProducto, 0, ',', '.'); ?></strong></span>
-                        <span>Pérdida estimada por defectos: <strong id="costoDefectuosas" style="color: #F87171;">$0</strong></span>
+                        <span>Pérdida estimada por defectos/faltantes: <strong id="costoDefectuosas" style="color: #F87171;">$0</strong></span>
                     </div>
                 </div>
 
@@ -187,7 +186,7 @@ if ($esEdicion && strpos($observacionesTexto, 'Motivo: ') === 0) {
                         <span id="balanceInsumosTotal" style="font-weight: bold; color: #34D399;">$0</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #94A3B8; border-top: 1px dashed #334155; padding-top: 6px;">
-                        <span>Descuento por Unidades Defectuosas:</span>
+                        <span>Descuento por Unidades Faltantes o Defectuosas:</span>
                         <span id="resumenDefectuosas" style="font-weight: bold; color: #F87171;">-$0</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #334155; padding-top: 8px;">
@@ -222,9 +221,9 @@ if ($esEdicion && strpos($observacionesTexto, 'Motivo: ') === 0) {
     const costoUnitarioBaseFijo = parseFloat(document.getElementById('costoUnitarioFijo').value) || 0;
     const spanImpactoNeto = document.getElementById('impactoFinancieroNeto');
     const spanPorcentaje = document.getElementById('porcentajeRendimiento');
+    const maximoDefectuosas = Math.max(0, planificadaOrden - defectuosasPrevias);
 
     lblCostoUnitario.textContent = "$" + Math.round(costoUnitarioBaseFijo).toLocaleString('es-CO');
-
     const valorBaseTotalLote = planificadaOrden * costoUnitarioBaseFijo;
     spanValorBaseLote.textContent = "$" + Math.round(valorBaseTotalLote).toLocaleString('es-CO');
 
@@ -242,7 +241,6 @@ if ($esEdicion && strpos($observacionesTexto, 'Motivo: ') === 0) {
             let costoTotalInsumoField = row.querySelector('.input-costo-total');
             costoTotalInsumoField.value = Math.round(cantReal * unitCost);
             
-            // Positivo = sobró material (ahorro). Negativo = se gastó de más (costo extra).
             balanceInsumosTotal += (cantPlanificada - cantReal) * unitCost;
         });
 
@@ -257,8 +255,6 @@ if ($esEdicion && strpos($observacionesTexto, 'Motivo: ') === 0) {
             spanBalanceInsumos.style.color = '#34D399';
         }
 
-        // Se cuentan TODAS las defectuosas del lote (las de antes + las de ahora),
-        // siempre sobre la cantidad planificada, para no descontarlas dos veces.
         const defectuosasTotales = (parseInt(inputDefectuosas.value) || 0) + defectuosasPrevias;
         const perdidaDefectos = Math.round(defectuosasTotales * costoUnitarioBaseFijo);
         spanCostoDefectuosas.textContent = "$" + perdidaDefectos.toLocaleString('es-CO');
@@ -291,8 +287,7 @@ if ($esEdicion && strpos($observacionesTexto, 'Motivo: ') === 0) {
         }
     }
 
-    const maximoDefectuosas = Math.max(0, planificadaOrden - defectuosasPrevias);
-
+    // SI EL USUARIO EDITA "DEFECTUOSAS", SE CALCULA AUTOMÁTICAMENTE "CORRECTAS"
     inputDefectuosas.addEventListener('input', () => {
         let defectuosas = parseInt(inputDefectuosas.value) || 0;
         if (defectuosas < 0) defectuosas = 0;
@@ -301,8 +296,21 @@ if ($esEdicion && strpos($observacionesTexto, 'Motivo: ') === 0) {
         
         const totales = defectuosas + defectuosasPrevias;
         const finales = planificadaOrden - totales;
-        inputFinalesReales.value = finales + " unidades correctas (" + totales + " defectuosas en total)";
+        inputFinalesReales.value = finales;
         
+        actualizarCalculosGlobales();
+    });
+
+    // SI EL USUARIO EDITA "CORRECTAS", SE CALCULA AUTOMÁTICAMENTE "DEFECTUOSAS"
+    inputFinalesReales.addEventListener('input', () => {
+        let correctas = parseInt(inputFinalesReales.value) || 0;
+        if (correctas < 0) correctas = 0;
+        if (correctas > maximoDefectuosas) correctas = maximoDefectuosas; // Máximo las que quedan disponibles
+        inputFinalesReales.value = correctas;
+
+        const defectuosas = planificadaOrden - defectuosasPrevias - correctas;
+        inputDefectuosas.value = defectuosas;
+
         actualizarCalculosGlobales();
     });
 
