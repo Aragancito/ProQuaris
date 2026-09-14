@@ -8,19 +8,28 @@ class InventarioModel {
         $this->db = Conexion::conectar();
     }
 
-    public function obtenerTodos() {
+    // $adminId = planta del usuario actual. Si viene vacío, se listan todos
+    // (comportamiento anterior; útil para tareas internas).
+    public function obtenerTodos($adminId = null) {
         try {
-            $query = "SELECT * FROM inventario";
-            return $this->db->query($query)->fetchAll(PDO::FETCH_ASSOC);
+            $sql = "SELECT * FROM inventario";
+            $params = [];
+            if (!empty($adminId)) {
+                $sql .= " WHERE admin_id = ?";
+                $params[] = $adminId;
+            }
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             return [];
         }
     }
 
-    public function insertar($datos) {
+    public function insertar($datos, $adminId = null) {
         try {
-            $query = "INSERT INTO inventario (idinventario, insumo, stockActual, ubicacion, costoUnitario, unidadMedida) 
-                      VALUES (:idinventario, :insumo, :stockActual, :ubicacion, :costoUnitario, :unidadMedida)";
+            $query = "INSERT INTO inventario (idinventario, insumo, stockActual, ubicacion, costoUnitario, unidadMedida, admin_id) 
+                      VALUES (:idinventario, :insumo, :stockActual, :ubicacion, :costoUnitario, :unidadMedida, :adminId)";
             $stmt = $this->db->prepare($query);
             return $stmt->execute([
                 ':idinventario' => $datos['idinventario'],
@@ -28,7 +37,8 @@ class InventarioModel {
                 ':stockActual' => $datos['stockActual'],
                 ':ubicacion' => $datos['ubicacion'],
                 ':costoUnitario' => $datos['costoUnitario'],
-                ':unidadMedida' => $datos['unidadMedida']
+                ':unidadMedida' => $datos['unidadMedida'],
+                ':adminId' => $adminId
             ]);
         } catch (PDOException $e) {
             return false;

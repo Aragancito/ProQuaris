@@ -43,7 +43,7 @@ if (!isset($_SESSION['usuario_nombre'])) {
                     <?php if (!empty($productos)): ?>
                         <?php foreach ($productos as $p): ?>
                             <tr style="border-bottom: 1px solid #1E293B;">
-                                <td style="padding: 10px;">#<?php echo $p['idProducto']; ?></td>
+                                <td style="padding: 10px;">#<?php echo $p['numeroPlanta'] ?? $p['idProducto']; ?></td>
                                 <td style="padding: 10px; font-weight: 500;"><?php echo htmlspecialchars($p['nombre']); ?></td>
                                 <td style="padding: 10px; color: #94A3B8;"><?php echo htmlspecialchars($p['descripcion']); ?></td>
                                 <td style="padding: 10px; color: #34D399;">$<?php echo number_format($p['plusvalia'] ?? 0, 2); ?></td>

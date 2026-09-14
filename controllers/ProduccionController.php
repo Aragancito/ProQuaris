@@ -1,26 +1,30 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
-if (!isset($_SESSION['usuario_nombre']) || !in_array($_SESSION['usuario_rol'], ['Administrador', 'Operario'])) {
+if (!isset($_SESSION['usuario_nombre']) || !in_array($_SESSION['usuario_rol'], ['Administrador', 'Empleado'])) {
     header("Location: ../views/login.php");
     exit();
 }
 
-// BLOQUEO ESTRICTO: Si es operario, debe tener planta Y estar aprobado
-if ($_SESSION['usuario_rol'] === 'Operario') {
+// BLOQUEO ESTRICTO: Si es empleado, debe tener planta asignada Y estar aprobado
+if ($_SESSION['usuario_rol'] === 'Empleado') {
     if (empty($_SESSION['admin_id']) || ($_SESSION['estado'] ?? '') !== 'Activo') {
         header("Location: ../views/usuarios.php"); 
         exit();
     }
 }
 
+$adminIdPlanta = $_SESSION['admin_id'] ?? null;
+
 require_once __DIR__ . '/../models/ProduccionModel.php';
 
 class ProduccionController {
     private $model;
+    private $adminIdPlanta;
 
-    public function __construct() {
+    public function __construct($adminIdPlanta) {
         $this->model = new ProduccionModel();
+        $this->adminIdPlanta = $adminIdPlanta;
     }
 
     public function procesarAccion() {
@@ -39,7 +43,9 @@ class ProduccionController {
     }
 
     public function listar() {
-        $lotes = $this->model->obtenerLotes();
+        // Solo lotes cuya orden pertenece a la planta del usuario actual
+        // (Administrador o Empleado ya aprobado en esa planta).
+        $lotes = $this->model->obtenerLotes($this->adminIdPlanta);
         require_once __DIR__ . '/../views/lotes.php';
     }
 
@@ -53,6 +59,6 @@ class ProduccionController {
     }
 }
 
-$controller = new ProduccionController();
+$controller = new ProduccionController($adminIdPlanta);
 $controller->procesarAccion();
 ?>

@@ -33,7 +33,7 @@ $tienePlanta = !empty($adminIdPlanta);
 $estaAprobado = ($estadoUsuario === 'Activo');
 $puedeOperar = ($tienePlanta && $estaAprobado);
 
-$countActivas = 0; $countLotes = 0; $countAlertas = 0; $totalInspecciones = 0; $ordenesActivasList = [];
+$countActivas = 0; $countLotes = 0; $countAlertas = 0;
 
 if ($puedeOperar) {
     try {
@@ -53,18 +53,6 @@ if ($puedeOperar) {
         $stmtAlertas->execute([$adminIdPlanta]);
         $countAlertas = $stmtAlertas->fetchColumn() ?: 0;
     } catch (Exception $e) {}
-
-    try {
-        $stmtInsp = $db->prepare("SELECT COUNT(*) FROM registroinspeccion WHERE admin_id = ?");
-        $stmtInsp->execute([$adminIdPlanta]);
-        $totalInspecciones = $stmtInsp->fetchColumn() ?: 0;
-    } catch (Exception $e) {}
-
-    try {
-        $stmtOrdenes = $db->prepare("SELECT *, producto AS productoNombre FROM ordenproduccion WHERE estado = 'Activa' AND admin_id = ? ORDER BY idOrden DESC LIMIT 5");
-        $stmtOrdenes->execute([$adminIdPlanta]);
-        $ordenesActivasList = $stmtOrdenes->fetchAll(PDO::FETCH_ASSOC);
-    } catch (Exception $e) {}
 }
 ?>
 <!DOCTYPE html>
@@ -74,7 +62,6 @@ if ($puedeOperar) {
     <title>Panel Operativo - ProQuaris</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/ProQuaris/views/css/estilos-globales.css?v=<?php echo time(); ?>">
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 </head>
 <body>
 <div class="dashboard-container">
@@ -102,8 +89,8 @@ if ($puedeOperar) {
             </div>
         <?php endif; ?>
 
-        <!-- TARJETAS KPI OPERATIVAS -->
-        <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
+        <!-- TARJETAS KPI OPERATIVAS: solo las 3 heredadas de la planta -->
+        <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr);">
             <div class="kpi-card">
                 <div class="kpi-title">Órdenes Activas</div>
                 <div class="kpi-value" style="color: #38BDF8;"><?php echo $countActivas; ?></div>
@@ -119,60 +106,8 @@ if ($puedeOperar) {
                 <div class="kpi-value" style="color: #F87171;"><?php echo $countAlertas; ?></div>
                 <div class="kpi-trend trend-down">Lotes rechazados</div>
             </div>
-            <div class="kpi-card">
-                <div class="kpi-title">Inspecciones Totales</div>
-                <div class="kpi-value" style="color: #A855F7;"><?php echo $totalInspecciones; ?></div>
-                <div class="kpi-trend trend-up">Registros de control</div>
-            </div>
-        </div>
-
-        <div class="table-container" style="margin-top: 25px; margin-bottom: 40px;">
-            <h3 style="color: #F8FAFC; margin-bottom: 15px; font-size: 16px;">Órdenes de Producción Activas (Para Ejecución)</h3>
-            <table id="tablaOperativa" class="display" style="width: 100%; color: #CBD5E1;">
-                <thead>
-                    <tr style="color: #94A3B8; text-transform: uppercase; font-size: 12px;">
-                        <th>REF. ORDEN</th>
-                        <th>PRODUCTO</th>
-                        <th>CANTIDAD PLANIFICADA</th>
-                        <th>ESTADO</th>
-                        <th style="text-align: center;">ACCIONES / CALIDAD</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (!empty($ordenesActivasList) && $puedeOperar): ?>
-                        <?php foreach ($ordenesActivasList as $ord): ?>
-                        <tr>
-                            <td><strong style="color: #38BDF8;">Orden #<?php echo htmlspecialchars($ord['idOrden']); ?></strong></td>
-                            <td style="font-weight: bold; color: #FFF;"><?php echo htmlspecialchars($ord['productoNombre'] ?? ''); ?></td>
-                            <td><?php echo htmlspecialchars($ord['cantidadPlanificada']); ?> uds</td>
-                            <td><span style="color: #34D399; font-weight: bold;"><?php echo htmlspecialchars($ord['estado']); ?></span></td>
-                            <td style="text-align: center;">
-                                <a href="/ProQuaris/controllers/ProduccionController.php?accion=listar" style="padding: 6px 12px; background: #3B82F6; color: white; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: bold;">🔍 Ver Lotes / Inspeccionar</a>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
         </div>
     </main>
 </div>
-<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-<script>
-$(document).ready(function() {
-    $('#tablaOperativa').DataTable({
-        pageLength: 5,
-        language: {
-            search: "Buscar:",
-            lengthMenu: "Mostrar _MENU_ registros",
-            info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
-            zeroRecords: "No hay órdenes activas",
-            emptyTable: "No hay órdenes activas en planta o tu acceso aún no está aprobado",
-            paginate: { first: "Primero", previous: "Anterior", next: "Siguiente", last: "Último" }
-        }
-    });
-});
-</script>
 </body>
 </html>

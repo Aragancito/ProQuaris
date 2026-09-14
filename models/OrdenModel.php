@@ -8,13 +8,28 @@ class OrdenModel {
         $this->db = Conexion::conectar();
     }
 
-    public function obtenerTodas() {
-        $sql = "SELECT o.*, p.nombre AS producto 
+    // $adminId = planta a la que pertenece quien consulta. Si viene vacío,
+    // se listan todas (comportamiento anterior, útil para tareas internas/histórico).
+    // Se trae también el nombre y rol de quien CREÓ la orden (creador_id), para
+    // poder mostrar "Creado por: Fulano (Administrador/Empleado)".
+    public function obtenerTodas($adminId = null) {
+        $sql = "SELECT o.*, p.nombre AS producto,
+                       CONCAT(u.nombre, ' ', u.apellido) AS creadorNombre,
+                       u.rol AS creadorRol,
+                       (SELECT COUNT(*) FROM ordenproduccion o2 
+                        WHERE o2.admin_id = o.admin_id AND o2.idOrden <= o.idOrden) AS numeroPlanta
                 FROM ordenproduccion o 
-                LEFT JOIN productos p ON o.idProducto = p.idProducto 
-                ORDER BY o.idOrden DESC";
+                LEFT JOIN productos p ON o.idProducto = p.idProducto
+                LEFT JOIN usuario u ON o.creador_id = u.id";
+        $params = [];
+        if (!empty($adminId)) {
+            $sql .= " WHERE o.admin_id = ?";
+            $params[] = $adminId;
+        }
+        $sql .= " ORDER BY o.idOrden DESC";
+
         $stmt = $this->db->prepare($sql);
-        $stmt->execute();
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -25,18 +40,23 @@ class OrdenModel {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    public function crear($datos) {
+    // $adminId = planta dueña de esta orden (el Administrador, o el admin_asignado
+    // del Empleado que la crea). $creadorId = quién la creó realmente (para trazabilidad,
+    // sin importar si es Administrador o Empleado: el sistema funciona igual para ambos).
+    public function crear($datos, $adminId = null, $creadorId = null) {
         try {
             $this->db->beginTransaction();
 
-            $sql = "INSERT INTO ordenproduccion (cantidadPlanificada, fechaInicio, idProducto, estado) 
-                    VALUES (?, ?, ?, ?)";
+            $sql = "INSERT INTO ordenproduccion (cantidadPlanificada, fechaInicio, idProducto, estado, admin_id, creador_id) 
+                    VALUES (?, ?, ?, ?, ?, ?)";
             $stmt = $this->db->prepare($sql);
             $stmt->execute([
                 $datos['cantidadPlanificada'],
                 $datos['fechaInicio'],
                 $datos['idProducto'],
-                'Activa'
+                'Activa',
+                $adminId,
+                $creadorId
             ]);
             $idOrden = $this->db->lastInsertId();
 
@@ -152,12 +172,28 @@ class OrdenModel {
         } catch (Exception $e) {}
     }
 
-    public function obtenerHistoricoCompleto() {
-        $sql = "SELECT h.*, l.idLote 
+    // $adminId = planta del usuario actual, para que el histórico también quede
+    // acotado a la propia planta (antes traía TODAS las órdenes completadas del sistema).
+    // Se trae además el nombre y rol de quien creó cada orden.
+    public function obtenerHistoricoCompleto($adminId = null) {
+        $sql = "SELECT h.*, l.idLote,
+                       CONCAT(u.nombre, ' ', u.apellido) AS creadorNombre,
+                       u.rol AS creadorRol,
+                       (SELECT COUNT(*) FROM ordenproduccion o2 
+                        WHERE o2.admin_id = o.admin_id AND o2.idOrden <= o.idOrden) AS numeroPlanta
                 FROM historico_produccion h 
-                LEFT JOIN lote l ON h.idOrden = l.FK_ordenId 
-                ORDER BY h.idHistorico DESC";
-        $stmt = $this->db->query($sql);
+                LEFT JOIN ordenproduccion o ON h.idOrden = o.idOrden
+                LEFT JOIN usuario u ON o.creador_id = u.id
+                LEFT JOIN lote l ON h.idOrden = l.FK_ordenId";
+        $params = [];
+        if (!empty($adminId)) {
+            $sql .= " WHERE o.admin_id = ?";
+            $params[] = $adminId;
+        }
+        $sql .= " ORDER BY h.idHistorico DESC";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 

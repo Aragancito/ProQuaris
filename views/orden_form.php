@@ -10,7 +10,9 @@ if (!isset($_SESSION['usuario_nombre'])) {
 
 require_once __DIR__ . '/../models/ProductoModel.php';
 $prodModel = new ProductoModel();
-$listaProductos = $prodModel->obtenerTodos();
+// Solo el catálogo de la planta del usuario actual (antes traía TODOS los productos
+// del sistema, sin importar de qué Administrador fueran).
+$listaProductos = $prodModel->obtenerTodos($_SESSION['admin_id'] ?? null);
 
 $esEdicion = isset($orden) && !empty($orden);
 $titulo = $esEdicion ? "Editar Orden de Producción" : "Nueva Orden de Producción";

@@ -12,6 +12,10 @@ $nombreUsuario = $_SESSION['usuario_nombre'] ?? 'Usuario';
 $rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
 $idLote = $_GET['idLote'] ?? 'N/A';
 $inspecciones = $inspecciones ?? [];
+// El número de lote/orden "de planta" es el mismo para todas las filas (comparten lote),
+// así que se toma de la primera fila para el título. Si no hay inspecciones todavía,
+// se muestra el ID real como respaldo.
+$loteNumeroPlanta = $inspecciones[0]['numeroLotePlanta'] ?? $idLote;
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -30,7 +34,7 @@ $inspecciones = $inspecciones ?? [];
         <div class="top-bar">
             <div class="page-title">
                 <h1>Historial de Calidad</h1>
-                <p>Auditoría inmutable de inspecciones realizadas al Lote #<?php echo htmlspecialchars($idLote); ?></p>
+                <p>Auditoría inmutable de inspecciones realizadas al Lote #<?php echo htmlspecialchars($loteNumeroPlanta); ?></p>
             </div>
             <a href="/ProQuaris/controllers/ProduccionController.php?accion=listar" class="btn-primary" style="padding: 10px 20px; background: #475569; color: white; border-radius: 8px; text-decoration: none; font-weight: 500;">← Volver al listado</a>
         </div>
@@ -72,7 +76,7 @@ $inspecciones = $inspecciones ?? [];
                             <tr style="border-bottom: 1px solid #1E293B;">
                                 <td style="padding: 14px;">
                                     <div style="font-weight: 600; color: #F8FAFC;"><?php echo htmlspecialchars($row['fecha'] ?? ''); ?></div>
-                                    <div style="font-size: 12px; color: #38BDF8; margin-top: 2px;">Orden #<?php echo htmlspecialchars($row['numeroOrden'] ?? 'N/A'); ?> (Lote #<?php echo htmlspecialchars($idLote); ?>)</div>
+                                    <div style="font-size: 12px; color: #38BDF8; margin-top: 2px;">Orden #<?php echo htmlspecialchars($row['numeroOrdenPlanta'] ?? $row['numeroOrden'] ?? 'N/A'); ?> (Lote #<?php echo htmlspecialchars($row['numeroLotePlanta'] ?? $idLote); ?>)</div>
                                 </td>
                                 <td style="padding: 14px;">
                                     <div style="font-weight: bold; color: #F1F5F9;"><?php echo htmlspecialchars($row['producto_nombre'] ?? 'Producto'); ?></div>

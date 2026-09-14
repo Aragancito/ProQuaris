@@ -48,8 +48,8 @@ if (!isset($_SESSION['usuario_nombre'])) {
                     <?php if (!empty($lotes)): ?>
                         <?php foreach ($lotes as $lote): ?>
                             <tr>
-                                <td><strong>#<?php echo htmlspecialchars($lote['idLote'] ?? ''); ?></strong></td>
-                                <td><span style="background: #2196F3; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Orden #<?php echo htmlspecialchars($lote['FK_ordenId'] ?? ''); ?></span></td>
+                                <td><strong>#<?php echo htmlspecialchars($lote['numeroLotePlanta'] ?? $lote['idLote'] ?? ''); ?></strong></td>
+                                <td><span style="background: #2196F3; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Orden #<?php echo htmlspecialchars($lote['numeroOrdenPlanta'] ?? $lote['FK_ordenId'] ?? ''); ?></span></td>
                                 <td style="font-weight: 500; color: #F8FAFC;"><?php echo htmlspecialchars($lote['producto'] ?? 'Sin asignar'); ?></td>
                                 <td><?php echo htmlspecialchars($lote['cantidad'] ?? ''); ?> uds</td>
                                 <td><?php echo htmlspecialchars($lote['fechaCreacion'] ?? ''); ?></td>

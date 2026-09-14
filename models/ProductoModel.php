@@ -8,10 +8,24 @@ class ProductoModel {
         $this->db = Conexion::conectar();
     }
 
-    public function obtenerTodos() {
+    // $adminId = planta del usuario actual. Si viene vacío, se listan todos
+    // (comportamiento anterior; útil para tareas internas).
+    public function obtenerTodos($adminId = null) {
         try {
-            $query = "SELECT * FROM productos ORDER BY idProducto DESC";
-            return $this->db->query($query)->fetchAll(PDO::FETCH_ASSOC);
+            $sql = "SELECT p.*,
+                           (SELECT COUNT(*) FROM productos p2 
+                            WHERE p2.admin_id = p.admin_id AND p2.idProducto <= p.idProducto) AS numeroPlanta
+                    FROM productos p";
+            $params = [];
+            if (!empty($adminId)) {
+                $sql .= " WHERE p.admin_id = ?";
+                $params[] = $adminId;
+            }
+            $sql .= " ORDER BY p.idProducto DESC";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
             return [];
         }
@@ -37,17 +51,20 @@ class ProductoModel {
         }
     }
 
-    public function crearConInsumosDirectos($datosProducto, $insumosDirectos) {
+    // $adminId = planta dueña de este producto (se graba para que obtenerTodos()
+    // pueda filtrar por planta más adelante).
+    public function crearConInsumosDirectos($datosProducto, $insumosDirectos, $adminId = null) {
         try {
             $this->db->beginTransaction();
 
-            $query = "INSERT INTO productos (nombre, descripcion, plusvalia, precioVenta) VALUES (?, ?, ?, ?)";
+            $query = "INSERT INTO productos (nombre, descripcion, plusvalia, precioVenta, admin_id) VALUES (?, ?, ?, ?, ?)";
             $stmt = $this->db->prepare($query);
             $stmt->execute([
                 $datosProducto['nombre'],
                 $datosProducto['descripcion'],
                 $datosProducto['plusvalia'],
-                $datosProducto['precioVenta']
+                $datosProducto['precioVenta'],
+                $adminId
             ]);
             $idProducto = $this->db->lastInsertId();
 

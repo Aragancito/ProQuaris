@@ -114,6 +114,7 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
                         <th>Producto</th>
                         <th>Cantidad</th>
                         <th>Fecha</th>
+                        <th>Creado por</th>
                         <th>Estado</th>
                         <th style="text-align: center;">Acciones</th>
                     </tr>
@@ -129,10 +130,19 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
                             if ($estado === 'Inactiva') $claseSelect = 'estado-inactiva';
                         ?>
                         <tr>
-                            <td><strong>#<?php echo htmlspecialchars($o['idOrden'] ?? ''); ?></strong></td>
+                            <td><strong>#<?php echo htmlspecialchars($o['numeroPlanta'] ?? $o['idOrden'] ?? ''); ?></strong></td>
                             <td style="font-weight: 500; color: #F8FAFC;"><?php echo htmlspecialchars($o['producto'] ?? 'Producto no especificado'); ?></td>
                             <td><?php echo htmlspecialchars($o['cantidadPlanificada'] ?? ''); ?> uds</td>
                             <td><?php echo htmlspecialchars($o['fechaInicio'] ?? ''); ?></td>
+                            <td>
+                                <?php $rolCreador = $o['creadorRol'] ?? ''; ?>
+                                <span style="color: #CBD5E1;"><?php echo htmlspecialchars(trim($o['creadorNombre'] ?? '') ?: '—'); ?></span>
+                                <?php if (!empty($rolCreador)): ?>
+                                    <span style="display:inline-block; margin-left:6px; padding:1px 6px; border-radius:4px; font-size:10px; font-weight:bold; background: rgba(148,163,184,0.15); color: <?php echo ($rolCreador === 'Administrador') ? '#A855F7' : '#38BDF8'; ?>;">
+                                        <?php echo htmlspecialchars($rolCreador); ?>
+                                    </span>
+                                <?php endif; ?>
+                            </td>
                             <td>
                                 <!-- Botón Deslizante / Switch Dinámico para cambiar estado -->
                                 <div class="switch-estado">

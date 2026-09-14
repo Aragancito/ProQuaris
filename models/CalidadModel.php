@@ -27,7 +27,7 @@ class CalidadModel {
         }
     }
 
-    public function guardarInspeccion($idLote, $resultado, $motivo, $observaciones, $unidadesDefectuosas, $inspectorId, $impactoFinanciero = 0, $unidadesBase = 0, $porcentajeRendimiento = 0) {
+    public function guardarInspeccion($idLote, $resultado, $motivo, $observaciones, $unidadesDefectuosas, $inspectorId, $impactoFinanciero = 0, $unidadesBase = 0, $porcentajeRendimiento = 0, $adminId = null) {
         try {
             $stmtUser = $this->db->prepare("SELECT id FROM usuario WHERE id = :id");
             $stmtUser->execute([':id' => $inspectorId]);
@@ -48,9 +48,23 @@ class CalidadModel {
 
             $observacionesCompletas = "Motivo: " . $motivo . " - Detalle: " . $observaciones;
 
+            // admin_id: si no llegó explícito, se hereda de la orden/planta dueña del lote,
+            // para que quede coherente incluso si algún flujo antiguo no lo mandó.
+            if (empty($adminId)) {
+                $stmtAdmin = $this->db->prepare("
+                    SELECT op.admin_id 
+                    FROM lote l 
+                    JOIN ordenproduccion op ON l.FK_ordenId = op.idOrden 
+                    WHERE l.idLote = :loteId
+                ");
+                $stmtAdmin->execute([':loteId' => $idLote]);
+                $adminData = $stmtAdmin->fetch(PDO::FETCH_ASSOC);
+                $adminId = $adminData['admin_id'] ?? null;
+            }
+
             $query = "INSERT INTO registroinspeccion 
-                      (FK_loteId, FK_inspectorId, fecha, resultado, observaciones, unidades_defectuosas, producto_nombre, impacto_financiero, porcentaje_rendimiento, unidades_base_inspeccion) 
-                      VALUES (:loteId, :inspector, NOW(), :resultado, :obs, :defectuosas, :prodNombre, :impacto, :porcentaje, :unidadesBase)";
+                      (FK_loteId, FK_inspectorId, fecha, resultado, observaciones, unidades_defectuosas, producto_nombre, impacto_financiero, porcentaje_rendimiento, unidades_base_inspeccion, admin_id) 
+                      VALUES (:loteId, :inspector, NOW(), :resultado, :obs, :defectuosas, :prodNombre, :impacto, :porcentaje, :unidadesBase, :adminId)";
             
             $stmt = $this->db->prepare($query);
             $stmt->execute([
@@ -62,7 +76,8 @@ class CalidadModel {
                 ':prodNombre' => $nombreProducto,
                 ':impacto' => $impactoFinanciero,
                 ':porcentaje' => $porcentajeRendimiento,
-                ':unidadesBase' => $unidadesBase
+                ':unidadesBase' => $unidadesBase,
+                ':adminId' => $adminId
             ]);
             return true;
         } catch (PDOException $e) {
@@ -72,9 +87,14 @@ class CalidadModel {
 
     public function obtenerInspeccionesPorLote($idLote) {
         try {
-            $query = "SELECT r.*, u.nombre AS inspectorNombre, 
+            $query = "SELECT r.*, CONCAT(u.nombre, ' ', u.apellido) AS inspectorNombre, u.rol AS inspectorRol,
                              l.FK_ordenId AS numeroOrden, l.cantidad AS cantidadActualLote,
-                             p.precioVenta AS precioUnitarioProducto
+                             p.precioVenta AS precioUnitarioProducto,
+                             (SELECT COUNT(*) FROM lote l2 
+                              JOIN ordenproduccion o2 ON l2.FK_ordenId = o2.idOrden 
+                              WHERE o2.admin_id = op.admin_id AND l2.idLote <= l.idLote) AS numeroLotePlanta,
+                             (SELECT COUNT(*) FROM ordenproduccion o3 
+                              WHERE o3.admin_id = op.admin_id AND o3.idOrden <= op.idOrden) AS numeroOrdenPlanta
                       FROM registroinspeccion r 
                       LEFT JOIN usuario u ON r.FK_inspectorId = u.id 
                       LEFT JOIN lote l ON r.FK_loteId = l.idLote

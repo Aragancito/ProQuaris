@@ -1,15 +1,31 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) session_start();
+
+if (!isset($_SESSION['usuario_nombre']) || !in_array($_SESSION['usuario_rol'], ['Administrador', 'Empleado'])) {
+    header("Location: ../views/login.php");
+    exit();
+}
+
+// Misma regla que Órdenes y Lotes: el Empleado necesita planta asignada y estar aprobado.
+if ($_SESSION['usuario_rol'] === 'Empleado') {
+    if (empty($_SESSION['admin_id']) || ($_SESSION['estado'] ?? '') !== 'Activo') {
+        header("Location: ../views/usuarios.php");
+        exit();
+    }
+}
+
 require_once __DIR__ . '/../models/CalidadModel.php';
 require_once __DIR__ . '/../models/ProduccionModel.php';
 
 class CalidadController {
     private $model;
     private $produccionModel;
+    private $adminIdPlanta;
 
-    public function __construct() { 
+    public function __construct($adminIdPlanta) { 
         $this->model = new CalidadModel(); 
         $this->produccionModel = new ProduccionModel();
+        $this->adminIdPlanta = $adminIdPlanta;
     }
 
     public function procesarAccion() {
@@ -118,7 +134,8 @@ class CalidadController {
                 $_SESSION['usuario_id'] ?? 1,
                 $calculo['impactoNeto'],
                 $unidadesBaseInspeccion, // <- AQUÍ ENVIAMOS LA BASE REAL (191) EN VEZ DEL TOTAL (200)
-                $calculo['porcentaje']
+                $calculo['porcentaje'],
+                $this->adminIdPlanta // <- planta dueña de esta inspección (para dashboard_empleado, historial, etc.)
             );
             
             header("Location: /ProQuaris/controllers/CalidadController.php?accion=historial&idLote=$idLote");
@@ -206,6 +223,6 @@ class CalidadController {
         exit();
     }
 }
-$controller = new CalidadController();
+$controller = new CalidadController($_SESSION['admin_id'] ?? null);
 $controller->procesarAccion();
 ?>

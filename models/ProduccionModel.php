@@ -8,18 +8,33 @@ class ProduccionModel {
         $this->db = Conexion::conectar();
     }
 
-    public function obtenerLotes() {
+    // $adminId = planta del usuario actual. Si viene vacío, se listan todos los
+    // lotes (comportamiento anterior; útil para tareas internas).
+    public function obtenerLotes($adminId = null) {
         try {
-            $query = "SELECT l.idLote, l.FK_ordenId, p.nombre AS producto, l.cantidad, l.fechaCreacion, l.estado, 
+            $sql = "SELECT l.idLote, l.FK_ordenId, p.nombre AS producto, l.cantidad, l.fechaCreacion, l.estado, 
                             (SELECT r.resultado FROM registroinspeccion r 
                              WHERE r.FK_loteId = l.idLote 
-                             ORDER BY r.fecha DESC LIMIT 1) AS resultadoCalidad 
+                             ORDER BY r.fecha DESC LIMIT 1) AS resultadoCalidad,
+                            (SELECT COUNT(*) FROM lote l2 
+                             JOIN ordenproduccion o2 ON l2.FK_ordenId = o2.idOrden 
+                             WHERE o2.admin_id = o.admin_id AND l2.idLote <= l.idLote) AS numeroLotePlanta,
+                            (SELECT COUNT(*) FROM ordenproduccion o3 
+                             WHERE o3.admin_id = o.admin_id AND o3.idOrden <= o.idOrden) AS numeroOrdenPlanta
                       FROM lote l 
                       JOIN ordenproduccion o ON l.FK_ordenId = o.idOrden
                       LEFT JOIN productos p ON o.idProducto = p.idProducto
-                      WHERE o.estado != 'Completada'
-                      ORDER BY l.idLote DESC";
-            return $this->db->query($query)->fetchAll(PDO::FETCH_ASSOC);
+                      WHERE o.estado != 'Completada'";
+            $params = [];
+            if (!empty($adminId)) {
+                $sql .= " AND o.admin_id = ?";
+                $params[] = $adminId;
+            }
+            $sql .= " ORDER BY l.idLote DESC";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) { 
             die("Error de base de datos: " . $e->getMessage()); 
         }

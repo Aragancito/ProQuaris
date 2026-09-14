@@ -1,26 +1,31 @@
 <?php
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
-if (!isset($_SESSION['usuario_nombre']) || !in_array($_SESSION['usuario_rol'], ['Administrador', 'Operario'])) {
+if (!isset($_SESSION['usuario_nombre']) || !in_array($_SESSION['usuario_rol'], ['Administrador', 'Empleado'])) {
     header("Location: ../views/login.php");
     exit();
 }
 
 // Validación de planta y aprobación
-if ($_SESSION['usuario_rol'] === 'Operario') {
+if ($_SESSION['usuario_rol'] === 'Empleado') {
     if (empty($_SESSION['admin_id']) || ($_SESSION['estado'] ?? '') !== 'Activo') {
         header("Location: ../views/usuarios.php"); 
         exit();
     }
 }
 
+// Planta del usuario actual (para Administrador es su propio id).
+$adminIdPlanta = $_SESSION['admin_id'] ?? null;
+
 require_once __DIR__ . '/../models/ProductoModel.php';
 
 class ProductoController {
     private $model;
+    private $adminIdPlanta;
 
-    public function __construct() {
+    public function __construct($adminIdPlanta) {
         $this->model = new ProductoModel();
+        $this->adminIdPlanta = $adminIdPlanta;
     }
 
     public function procesarAccion() {
@@ -32,7 +37,8 @@ class ProductoController {
             case 'crear': 
             case 'editar': 
             case 'eliminar': 
-                // Restricción: Solo el Administrador puede gestionar productos
+                // Restricción: Solo el Administrador puede gestionar productos e insumos.
+                // El Empleado puede VER el listado (para consultar precios/recetas), pero no tocarlo.
                 if (($_SESSION['usuario_rol'] ?? '') !== 'Administrador') {
                     header("Location: ProductoController.php?accion=listar");
                     exit();
@@ -48,7 +54,8 @@ class ProductoController {
     }
 
     public function listar() {
-        $productos = $this->model->obtenerTodos();
+        // Solo el catálogo de la planta del usuario actual.
+        $productos = $this->model->obtenerTodos($this->adminIdPlanta);
         require_once __DIR__ . '/../views/productos.php';
     }
 
@@ -77,7 +84,8 @@ class ProductoController {
                 }
             }
 
-            $this->model->crearConInsumosDirectos($datosProducto, $insumosDirectos);
+            // Se graba con la planta del Administrador que lo está creando.
+            $this->model->crearConInsumosDirectos($datosProducto, $insumosDirectos, $this->adminIdPlanta);
             header("Location: ProductoController.php?accion=listar");
             exit();
         }
@@ -132,6 +140,6 @@ class ProductoController {
     }
 }
 
-$controller = new ProductoController();
+$controller = new ProductoController($adminIdPlanta);
 $controller->procesarAccion();
 ?>

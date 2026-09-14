@@ -14,13 +14,18 @@ if (!isset($_SESSION['usuario_nombre'])) {
 }
 
 // Bloqueo de seguridad: Si no es Administrador, redirigir al panel de empleado
-$rolUsuario = $_SESSION['usuario_rol'] ?? 'Operario';
+$rolUsuario = $_SESSION['usuario_rol'] ?? 'Empleado';
 if ($rolUsuario !== 'Administrador') {
     header("Location: dashboard_empleado.php");
     exit();
 }
 
 $nombreUsuario = $_SESSION['usuario_nombre'] ?? 'Usuario';
+
+// Planta del Administrador actual. Para un Administrador, admin_id = su propio id
+// (así quedó definido en el login). Todo lo que sigue se filtra por este valor,
+// para que cada Administrador vea SOLO su propia planta y no la de otros.
+$adminIdPlanta = $_SESSION['admin_id'] ?? $_SESSION['usuario_id'] ?? null;
 
 // Conexión a la base de datos
 require_once __DIR__ . '/../config/conexion.php';
@@ -41,73 +46,107 @@ $dataProduccion = [];
 $dataFinancieraMensual = [];
 $dataProductos = [];
 
-// --- BLOQUE 1: MÉTRICAS PRINCIPALES Y KPI (SEGURAS) ---
+// --- BLOQUE 1: MÉTRICAS PRINCIPALES Y KPI (SEGURAS, FILTRADAS POR PLANTA) ---
 try {
-    $stmtActivas = $db->query("SELECT COUNT(*) FROM ordenproduccion WHERE estado = 'Activa'");
+    $stmtActivas = $db->prepare("SELECT COUNT(*) FROM ordenproduccion WHERE estado = 'Activa' AND admin_id = ?");
+    $stmtActivas->execute([$adminIdPlanta]);
     $countActivas = $stmtActivas->fetchColumn() ?: 0;
 } catch (Exception $e) {}
 
 try {
-    $stmtLotes = $db->query("SELECT COUNT(l.idLote) FROM lote l JOIN ordenproduccion o ON l.FK_ordenId = o.idOrden WHERE o.estado = 'Activa'");
+    $stmtLotes = $db->prepare("SELECT COUNT(l.idLote) FROM lote l JOIN ordenproduccion o ON l.FK_ordenId = o.idOrden WHERE o.estado = 'Activa' AND o.admin_id = ?");
+    $stmtLotes->execute([$adminIdPlanta]);
     $countLotes = $stmtLotes->fetchColumn() ?: 0;
 } catch (Exception $e) {}
 
 try {
-    $stmtAlertas = $db->query("SELECT COUNT(*) FROM registroinspeccion WHERE resultado = 'Rechazado'");
+    $stmtAlertas = $db->prepare("SELECT COUNT(*) FROM registroinspeccion WHERE resultado = 'Rechazado' AND admin_id = ?");
+    $stmtAlertas->execute([$adminIdPlanta]);
     $countAlertas = $stmtAlertas->fetchColumn() ?: 0;
 } catch (Exception $e) {}
 
 try {
-    $stmtGanancias = $db->query("SELECT SUM(impactoFinancieroNeto) FROM historico_produccion WHERE MONTH(fechaCierre) = MONTH(CURRENT_DATE()) AND YEAR(fechaCierre) = YEAR(CURRENT_DATE())");
+    // historico_produccion no tiene admin_id propio: se llega a la planta a través
+    // de la orden (idOrden) que sí tiene admin_id.
+    $stmtGanancias = $db->prepare("SELECT SUM(h.impactoFinancieroNeto) 
+                FROM historico_produccion h
+                JOIN ordenproduccion o ON h.idOrden = o.idOrden
+                WHERE o.admin_id = ? AND MONTH(h.fechaCierre) = MONTH(CURRENT_DATE()) AND YEAR(h.fechaCierre) = YEAR(CURRENT_DATE())");
+    $stmtGanancias->execute([$adminIdPlanta]);
     $gananciasMes = $stmtGanancias->fetchColumn() ?: 0;
 } catch (Exception $e) {}
 
 try {
-    $stmtPerdidas = $db->query("SELECT SUM(unidadesDefectuosas) FROM historico_produccion WHERE MONTH(fechaCierre) = MONTH(CURRENT_DATE()) AND YEAR(fechaCierre) = YEAR(CURRENT_DATE())");
+    $stmtPerdidas = $db->prepare("SELECT SUM(h.unidadesDefectuosas) 
+                FROM historico_produccion h
+                JOIN ordenproduccion o ON h.idOrden = o.idOrden
+                WHERE o.admin_id = ? AND MONTH(h.fechaCierre) = MONTH(CURRENT_DATE()) AND YEAR(h.fechaCierre) = YEAR(CURRENT_DATE())");
+    $stmtPerdidas->execute([$adminIdPlanta]);
     $totalDefectuosasMes = $stmtPerdidas->fetchColumn() ?: 0;
     $perdidasMes = $totalDefectuosasMes * 50000; 
 } catch (Exception $e) {}
 
-// --- BLOQUE 2: MÉTRICAS DE CALIDAD EN TIEMPO REAL ---
+// --- BLOQUE 2: MÉTRICAS DE CALIDAD EN TIEMPO REAL (FILTRADAS POR PLANTA) ---
 try {
-    $stmtScrap = $db->query("SELECT (SUM(unidadesDefectuosas) / NULLIF(SUM(cantidadPlanificada), 0)) * 100 FROM historico_produccion WHERE MONTH(fechaCierre) = MONTH(CURRENT_DATE()) AND YEAR(fechaCierre) = YEAR(CURRENT_DATE())");
+    $stmtScrap = $db->prepare("SELECT (SUM(h.unidadesDefectuosas) / NULLIF(SUM(h.cantidadPlanificada), 0)) * 100 
+                FROM historico_produccion h
+                JOIN ordenproduccion o ON h.idOrden = o.idOrden
+                WHERE o.admin_id = ? AND MONTH(h.fechaCierre) = MONTH(CURRENT_DATE()) AND YEAR(h.fechaCierre) = YEAR(CURRENT_DATE())");
+    $stmtScrap->execute([$adminIdPlanta]);
     $tasaDefectos = round($stmtScrap->fetchColumn() ?: 0, 1);
 } catch (Exception $e) { $tasaDefectos = 0; }
 
 try {
-    $stmtInspMes = $db->query("SELECT COUNT(*) FROM registroinspeccion");
+    $stmtInspMes = $db->prepare("SELECT COUNT(*) FROM registroinspeccion WHERE admin_id = ?");
+    $stmtInspMes->execute([$adminIdPlanta]);
     $totalInspeccionesMes = $stmtInspMes->fetchColumn() ?: 0;
 } catch (Exception $e) { $totalInspeccionesMes = 0; }
 
-// --- BLOQUE 3: TABLA Y DATOS PARA GRÁFICAS ---
+// --- BLOQUE 3: TABLA Y DATOS PARA GRÁFICAS (FILTRADOS POR PLANTA) ---
 try {
-    $stmtTabla = $db->query("SELECT h.*, l.idLote 
+    $stmtTabla = $db->prepare("SELECT h.*, l.idLote 
                 FROM historico_produccion h 
+                JOIN ordenproduccion o ON h.idOrden = o.idOrden
                 LEFT JOIN lote l ON h.idOrden = l.FK_ordenId 
+                WHERE o.admin_id = ?
                 ORDER BY h.idHistorico DESC LIMIT 10");
+    $stmtTabla->execute([$adminIdPlanta]);
     $historicoDashboard = $stmtTabla->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {}
 
 try {
-    $stmtCal = $db->query("SELECT resultado, COUNT(*) as total FROM registroinspeccion GROUP BY resultado");
+    $stmtCal = $db->prepare("SELECT resultado, COUNT(*) as total FROM registroinspeccion WHERE admin_id = ? GROUP BY resultado");
+    $stmtCal->execute([$adminIdPlanta]);
     $dataCalidad = $stmtCal->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {}
 
 try {
-    $stmtProd = $db->query("SELECT DATE_FORMAT(fechaCierre, '%b %Y') as mes, SUM(unidadesCorrectas) as total 
-                FROM historico_produccion GROUP BY YEAR(fechaCierre), MONTH(fechaCierre) ORDER BY MAX(fechaCierre) ASC LIMIT 6");
+    $stmtProd = $db->prepare("SELECT DATE_FORMAT(h.fechaCierre, '%b %Y') as mes, SUM(h.unidadesCorrectas) as total 
+                FROM historico_produccion h
+                JOIN ordenproduccion o ON h.idOrden = o.idOrden
+                WHERE o.admin_id = ?
+                GROUP BY YEAR(h.fechaCierre), MONTH(h.fechaCierre) ORDER BY MAX(h.fechaCierre) ASC LIMIT 6");
+    $stmtProd->execute([$adminIdPlanta]);
     $dataProduccion = $stmtProd->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {}
 
 try {
-    $stmtFin = $db->query("SELECT DATE_FORMAT(fechaCierre, '%b %Y') as mes, SUM(impactoFinancieroNeto) as ganancias 
-                FROM historico_produccion GROUP BY YEAR(fechaCierre), MONTH(fechaCierre) ORDER BY MAX(fechaCierre) ASC LIMIT 6");
+    $stmtFin = $db->prepare("SELECT DATE_FORMAT(h.fechaCierre, '%b %Y') as mes, SUM(h.impactoFinancieroNeto) as ganancias 
+                FROM historico_produccion h
+                JOIN ordenproduccion o ON h.idOrden = o.idOrden
+                WHERE o.admin_id = ?
+                GROUP BY YEAR(h.fechaCierre), MONTH(h.fechaCierre) ORDER BY MAX(h.fechaCierre) ASC LIMIT 6");
+    $stmtFin->execute([$adminIdPlanta]);
     $dataFinancieraMensual = $stmtFin->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {}
 
 try {
-    $stmtProdR = $db->query("SELECT productoNombre, SUM(impactoFinancieroNeto) as totalGanancia, SUM(unidadesCorrectas) as correctas 
-                FROM historico_produccion GROUP BY productoNombre");
+    $stmtProdR = $db->prepare("SELECT h.productoNombre, SUM(h.impactoFinancieroNeto) as totalGanancia, SUM(h.unidadesCorrectas) as correctas 
+                FROM historico_produccion h
+                JOIN ordenproduccion o ON h.idOrden = o.idOrden
+                WHERE o.admin_id = ?
+                GROUP BY h.productoNombre");
+    $stmtProdR->execute([$adminIdPlanta]);
     $dataProductos = $stmtProdR->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {}
 ?>
@@ -288,13 +327,25 @@ $(document).ready(function() {
     };
 
     const ctxCalidad = document.getElementById('chartCalidad').getContext('2d');
+    // Colores fijos por nombre de resultado, NO por posición en el arreglo.
+    // Así, aunque una planta solo tenga un tipo de resultado (ej. solo "Rechazado"),
+    // ese resultado siempre sale con su color correcto en vez de tomar el primero de la lista.
+    const coloresCalidad = {
+        'Aprobado': '#34D399',
+        'Observación': '#F59E0B',
+        'Rechazado': '#EF4444'
+    };
+    const etiquetasCalidad = <?php echo json_encode(array_column($dataCalidad, 'resultado')); ?>;
+    const coloresOrdenados = etiquetasCalidad.map(function(etiqueta) {
+        return coloresCalidad[etiqueta] || '#94A3B8';
+    });
     new Chart(ctxCalidad, {
         type: 'doughnut',
         data: {
-            labels: <?php echo json_encode(array_column($dataCalidad, 'resultado')); ?>,
+            labels: etiquetasCalidad,
             datasets: [{
                 data: <?php echo json_encode(array_column($dataCalidad, 'total')); ?>,
-                backgroundColor: ['#34D399', '#EF4444', '#F59E0B'],
+                backgroundColor: coloresOrdenados,
                 borderWidth: 0, spacing: 6
             }]
         },
