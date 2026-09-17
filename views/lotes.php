@@ -74,7 +74,7 @@ if (!isset($_SESSION['usuario_nombre'])) {
                                     <a href="/ProQuaris/controllers/CalidadController.php?accion=registrar&idLote=<?php echo $lote['idLote']; ?>" class="btn-action" title="Registrar Inspección" style="color: #4CAF50;">
                                         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                                     </a>
-                                    <a href="/ProQuaris/controllers/ProduccionController.php?accion=eliminar&id=<?php echo $lote['idLote']; ?>" class="btn-action btn-delete" title="Eliminar Lote" onclick="return confirm('¿Seguro que deseas eliminar este lote?')">
+                                    <a href="/ProQuaris/controllers/ProduccionController.php?accion=eliminar&id=<?php echo $lote['idLote']; ?>" class="btn-action btn-delete" title="Eliminar Lote" data-confirm="¿Seguro que deseas eliminar este lote?">
                                         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                     </a>
                                 </td>

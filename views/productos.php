@@ -50,7 +50,7 @@ if (!isset($_SESSION['usuario_nombre'])) {
                                 <td style="padding: 10px; font-weight: bold;">$<?php echo number_format($p['precioVenta'], 2); ?></td>
                                 <td style="padding: 10px; text-align: center;">
                                     <a href="/ProQuaris/controllers/ProductoController.php?accion=editar&id=<?php echo $p['idProducto']; ?>" style="background: rgba(99, 102, 241, 0.15); color: #818CF8; padding: 6px 12px; border-radius: 6px; text-decoration: none; margin-right: 6px; font-size: 13px;">Editar</a>
-                                    <a href="/ProQuaris/controllers/ProductoController.php?accion=eliminar&id=<?php echo $p['idProducto']; ?>" onclick="return confirm('¿Seguro que deseas eliminar este producto?')" style="background: rgba(239, 68, 68, 0.15); color: #F87171; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 13px;">Eliminar</a>
+                                    <a href="/ProQuaris/controllers/ProductoController.php?accion=eliminar&id=<?php echo $p['idProducto']; ?>" data-confirm="¿Seguro que deseas eliminar este producto?" style="background: rgba(239, 68, 68, 0.15); color: #F87171; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 13px;">Eliminar</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

@@ -86,7 +86,7 @@ class ProductoController {
 
             // Se graba con la planta del Administrador que lo está creando.
             $this->model->crearConInsumosDirectos($datosProducto, $insumosDirectos, $this->adminIdPlanta);
-            header("Location: ProductoController.php?accion=listar");
+            header("Location: ProductoController.php?accion=listar&msg=" . urlencode("Producto creado correctamente"));
             exit();
         }
 
@@ -121,7 +121,7 @@ class ProductoController {
             }
 
             $this->model->actualizar($id, $datosProducto, $insumosDirectos);
-            header("Location: ProductoController.php?accion=listar");
+            header("Location: ProductoController.php?accion=listar&msg=" . urlencode("Producto actualizado correctamente"));
             exit();
         }
 
@@ -135,7 +135,7 @@ class ProductoController {
     public function eliminar() {
         $id = $_GET['id'] ?? 0;
         $this->model->eliminar($id);
-        header("Location: ProductoController.php?accion=listar");
+        header("Location: ProductoController.php?accion=listar&msg=" . urlencode("Producto eliminado correctamente"));
         exit();
     }
 }

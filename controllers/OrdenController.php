@@ -79,7 +79,7 @@ switch ($accion) {
             if ($idOrdenGenerada) {
                 $prodModel->registrarLote($idOrdenGenerada, $cantidadPlanificada, $estado);
             }
-            header("Location: OrdenController.php?accion=listar");
+            header("Location: OrdenController.php?accion=listar&msg=" . urlencode("Orden creada correctamente"));
             exit();
         }
         include '../views/orden_form.php';
@@ -111,7 +111,7 @@ switch ($accion) {
     case 'eliminar':
         $id = $_GET['id'] ?? 0;
         $model->eliminar($id);
-        header("Location: OrdenController.php?accion=listar");
+        header("Location: OrdenController.php?accion=listar&msg=" . urlencode("Orden eliminada correctamente"));
         exit();
 
     default:

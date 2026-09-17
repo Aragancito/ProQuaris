@@ -104,13 +104,44 @@ $loteNumeroPlanta = $inspecciones[0]['numeroLotePlanta'] ?? $idLote;
                                     </div>
                                 </td>
                                 <td style="padding: 14px; color: #94A3B8; font-size: 13px; max-width: 300px;">
-                                    <strong style="color: #CBD5E1;"><?php echo htmlspecialchars($row['inspectorNombre'] ?? 'Admin'); ?></strong><br>
-                                    <?php echo htmlspecialchars($row['observaciones'] ?? ''); ?>
+                                    <?php
+                                        $rolInspector = $row['inspectorRol'] ?? '';
+                                        $colorRolInspector = ($rolInspector === 'Administrador') ? '#A855F7' : '#38BDF8';
+                                    ?>
+                                    <div>
+                                        <span style="color: #64748B; font-size: 10px; text-transform: uppercase;">Inspeccionó:</span><br>
+                                        <strong style="color: #CBD5E1;"><?php echo htmlspecialchars(trim($row['inspectorNombre'] ?? '') ?: 'Admin'); ?></strong>
+                                        <?php if (!empty($rolInspector)): ?>
+                                            <span style="display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; background: rgba(148, 163, 184, 0.15); color: <?php echo $colorRolInspector; ?>;">
+                                                <?php echo htmlspecialchars($rolInspector); ?>
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <?php if (!empty($row['modificado_por_id']) && trim($row['editorNombre'] ?? '') !== ''): 
+                                        $rolEditor = $row['editorRol'] ?? '';
+                                        $colorRolEditor = ($rolEditor === 'Administrador') ? '#A855F7' : '#38BDF8';
+                                    ?>
+                                    <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed #334155;">
+                                        <span style="color: #64748B; font-size: 10px; text-transform: uppercase;">Última edición:</span><br>
+                                        <strong style="color: #CBD5E1;"><?php echo htmlspecialchars(trim($row['editorNombre'])); ?></strong>
+                                        <?php if (!empty($rolEditor)): ?>
+                                            <span style="display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; background: rgba(148, 163, 184, 0.15); color: <?php echo $colorRolEditor; ?>;">
+                                                <?php echo htmlspecialchars($rolEditor); ?>
+                                            </span>
+                                        <?php endif; ?>
+                                        <?php if (!empty($row['fecha_modificacion'])): ?>
+                                            <span style="color: #64748B; font-size: 11px;"> — <?php echo htmlspecialchars($row['fecha_modificacion']); ?></span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <?php endif; ?>
+                                    <div style="margin-top: 6px;">
+                                        <?php echo htmlspecialchars($row['observaciones'] ?? ''); ?>
+                                    </div>
                                 </td>
                                 <td style="padding: 14px; text-align: center; display: flex; gap: 8px; justify-content: center; align-items: center;">
                                     <a href="/ProQuaris/controllers/CalidadController.php?accion=editar&id=<?php echo $idRI; ?>" style="color: #38BDF8; text-decoration: none; font-weight: bold; font-size: 13px;">Editar</a>
                                     <span style="color: #334155;">|</span>
-                                    <a href="/ProQuaris/controllers/CalidadController.php?accion=eliminar&id=<?php echo $idRI; ?>&idLote=<?php echo $idLote; ?>" onclick="return confirm('¿Estás seguro de eliminar este registro y restaurar el stock?');" style="color: #F87171; text-decoration: none; font-weight: bold; font-size: 13px;">Eliminar</a>
+                                    <a href="/ProQuaris/controllers/CalidadController.php?accion=eliminar&id=<?php echo $idRI; ?>&idLote=<?php echo $idLote; ?>" data-confirm="¿Estás seguro de eliminar este registro y restaurar el stock?" style="color: #F87171; text-decoration: none; font-weight: bold; font-size: 13px;">Eliminar</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

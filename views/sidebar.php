@@ -26,12 +26,10 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
             <span class="nav-icon">🏷️</span>
             <span>Lotes y Calidad</span>
         </a>
-        <?php if ($rolUsuario === 'Administrador'): ?>
         <a href="/ProQuaris/controllers/ProductoController.php?accion=listar" class="nav-item">
             <span class="nav-icon">📦</span>
             <span>Inventario y Productos</span>
         </a>
-        <?php endif; ?>
         <a href="/ProQuaris/controllers/UsuarioController.php?accion=listar" class="nav-item">
             <span class="nav-icon">👥</span>
             <span>Usuarios y Roles</span>
@@ -44,3 +42,4 @@ $rolUsuario = $_SESSION['usuario_rol'] ?? 'Administrador';
         </a>
     </div>
 </aside>
+<script src="/ProQuaris/views/js/animaciones.js?v=<?php echo time(); ?>" defer></script>

@@ -96,7 +96,7 @@ if ($rolUsuario === 'Administrador') {
                                 <td><?php echo htmlspecialchars($sp['correo']); ?></td>
                                 <td style="text-align: center;">
                                     <a href="/ProQuaris/controllers/UsuarioController.php?accion=aprobar&id=<?php echo $sp['id']; ?>" class="btn-accion btn-aprobar">✔ Aprobar</a>
-                                    <a href="/ProQuaris/controllers/UsuarioController.php?accion=eliminar&id=<?php echo $sp['id']; ?>" class="btn-accion btn-eliminar" onclick="return confirm('¿Está seguro de rechazar esta solicitud?');">✖ Rechazar</a>
+                                    <a href="/ProQuaris/controllers/UsuarioController.php?accion=eliminar&id=<?php echo $sp['id']; ?>" class="btn-accion btn-eliminar" data-confirm="¿Está seguro de rechazar esta solicitud?">✖ Rechazar</a>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
@@ -128,7 +128,7 @@ if ($rolUsuario === 'Administrador') {
                                 <td><span style="color: #34D399; font-weight: bold;">Activo</span></td>
                                 <td style="text-align: center;">
                                     <!-- ACCIÓN MODIFICADA: Desvincula en lugar de borrar la cuenta -->
-                                    <a href="/ProQuaris/controllers/UsuarioController.php?accion=eliminar&id=<?php echo $p['id']; ?>" class="btn-accion btn-eliminar" onclick="return confirm('¿Está seguro de quitar a este operario de su planta? Su cuenta no se borrará, solo quedará desvinculada.');">🔌 Desvincular</a>
+                                    <a href="/ProQuaris/controllers/UsuarioController.php?accion=eliminar&id=<?php echo $p['id']; ?>" class="btn-accion btn-eliminar" data-confirm="¿Está seguro de quitar a este operario de su planta? Su cuenta no se borrará, solo quedará desvinculada.">🔌 Desvincular</a>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
