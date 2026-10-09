@@ -61,10 +61,41 @@ switch ($accion) {
 
     case 'crear':
         if ($requestMethod === 'POST') {
-            $cantidadPlanificada = $_POST['cantidadPlanificada'] ?? 0;
-            $fechaInicio = $_POST['fechaInicio'] ?? '';
-            $idProducto = $_POST['idProducto'] ?? 0;
+            $cantidadPlanificada = intval($_POST['cantidadPlanificada'] ?? 0);
+            $fechaInicio = trim($_POST['fechaInicio'] ?? '');
+            $idProducto = intval($_POST['idProducto'] ?? 0);
             $estado = $_POST['estado'] ?? 'Activa';
+
+            // --- VALIDACIÓN EN SERVIDOR ---
+            // El HTML del formulario ya pone required/min, pero eso es fácil de
+            // saltarse (basta con desactivar JS o mandar el POST directo). La
+            // validación que de verdad protege los datos es esta, del lado servidor.
+            $errores = [];
+
+            if ($cantidadPlanificada <= 0) {
+                $errores[] = "La cantidad planificada debe ser un número mayor a 0.";
+            }
+            if (empty($fechaInicio) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $fechaInicio)) {
+                $errores[] = "La fecha de inicio no es válida.";
+            }
+            if ($idProducto <= 0) {
+                $errores[] = "Debe seleccionar un producto del catálogo.";
+            } else {
+                // No basta con que el producto exista: tiene que ser de ESTA planta.
+                // Sin este chequeo, alguien podría forzar por URL/POST el idProducto
+                // de OTRA planta y crear una orden con un producto que no es suyo.
+                require_once __DIR__ . '/../models/ProductoModel.php';
+                $productoModel = new ProductoModel();
+                $productoValido = $productoModel->obtenerPorId($idProducto);
+                if (!$productoValido || ($productoValido['admin_id'] ?? null) != $adminIdPlanta) {
+                    $errores[] = "El producto seleccionado no pertenece a tu planta.";
+                }
+            }
+
+            if (!empty($errores)) {
+                header("Location: OrdenController.php?accion=crear&msg=" . urlencode(implode(' ', $errores)) . "&tipo=error");
+                exit();
+            }
 
             $datos = [
                 'cantidadPlanificada' => $cantidadPlanificada,

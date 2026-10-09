@@ -117,12 +117,55 @@ class UsuarioController {
 
     private function registrar() {
         $rol = $_POST['rol'] ?? 'Operario';
-        
+        $correo = trim($_POST['correo'] ?? $_POST['email'] ?? '');
+        $contrasenaNueva = $_POST['contraseña'] ?? $_POST['password'] ?? '';
+
+        // --- VALIDACIÓN DE CORREO (sin librerías externas) ---
+        // Nivel 1: ¿tiene forma de correo? filter_var ya viene con PHP.
+        // Nivel 2: ¿el dominio existe y puede recibir correo? checkdnsrr
+        // (también nativa de PHP) consulta el registro MX del dominio.
+        // Esto es lo que atrapa casos como "davidt@gmail" (sin .com):
+        // tiene forma válida para filter_var, pero "gmail" solo no es un
+        // dominio real con servidor de correo, así que checkdnsrr lo rechaza.
+        $errores = [];
+
+        if (empty($_POST['nombre'])) $errores[] = "El nombre es obligatorio.";
+        if (empty($_POST['apellido'])) $errores[] = "El apellido es obligatorio.";
+
+        if (empty($correo) || !filter_var($correo, FILTER_VALIDATE_EMAIL)) {
+            $errores[] = "El correo no tiene un formato válido.";
+        } else {
+            $dominio = substr(strrchr($correo, "@"), 1);
+            if (!checkdnsrr($dominio, "MX") && !checkdnsrr($dominio, "A")) {
+                $errores[] = "El dominio del correo ($dominio) no existe o no puede recibir correos.";
+            }
+        }
+
+        // Contraseña FUERTE, no solo "mínimo 6 caracteres de lo que sea":
+        // mínimo 8 caracteres, al menos una mayúscula, una minúscula y un número.
+        if (strlen($contrasenaNueva) < 8) {
+            $errores[] = "La contraseña debe tener al menos 8 caracteres.";
+        }
+        if (!preg_match('/[A-Z]/', $contrasenaNueva)) {
+            $errores[] = "La contraseña debe incluir al menos una letra mayúscula.";
+        }
+        if (!preg_match('/[a-z]/', $contrasenaNueva)) {
+            $errores[] = "La contraseña debe incluir al menos una letra minúscula.";
+        }
+        if (!preg_match('/[0-9]/', $contrasenaNueva)) {
+            $errores[] = "La contraseña debe incluir al menos un número.";
+        }
+
+        if (!empty($errores)) {
+            header("Location: ../views/registro.php?error=1&msg=" . urlencode(implode(' ', $errores)));
+            exit();
+        }
+
         $datos = array(
             'nombre' => $_POST['nombre'] ?? '',
             'apellido' => $_POST['apellido'] ?? '',
-            'correo' => $_POST['correo'] ?? $_POST['email'] ?? '',
-            'contraseña' => $_POST['contraseña'] ?? $_POST['password'] ?? '',
+            'correo' => $correo,
+            'contraseña' => $contrasenaNueva,
             'rol' => $rol,
             'empresa' => $_POST['empresa'] ?? null,
             'estado' => ($rol === 'Administrador') ? 'Activo' : 'Pendiente'
@@ -133,7 +176,7 @@ class UsuarioController {
         if ($resultado) {
             header("Location: ../views/login.php?registro=exitoso");
         } else {
-            header("Location: ../views/registro.php?error=1");
+            header("Location: ../views/registro.php?error=1&msg=" . urlencode("Ese correo ya está registrado o hubo un error al crear la cuenta."));
         }
         exit();
     }

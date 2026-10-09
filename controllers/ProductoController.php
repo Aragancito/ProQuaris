@@ -64,11 +64,31 @@ class ProductoController {
 
         if ($requestMethod === 'POST') {
             $datosProducto = [
-                'nombre' => $_POST['nombre'] ?? '',
-                'descripcion' => $_POST['descripcion'] ?? '',
-                'plusvalia' => $_POST['plusvalia'] ?? 0,
-                'precioVenta' => $_POST['precioVenta'] ?? 0
+                'nombre' => trim($_POST['nombre'] ?? ''),
+                'descripcion' => trim($_POST['descripcion'] ?? ''),
+                'plusvalia' => floatval($_POST['plusvalia'] ?? 0),
+                'precioVenta' => floatval($_POST['precioVenta'] ?? 0)
             ];
+
+            // --- VALIDACIÓN EN SERVIDOR ---
+            $errores = [];
+            if ($datosProducto['nombre'] === '') {
+                $errores[] = "El nombre del producto es obligatorio.";
+            }
+            if ($datosProducto['precioVenta'] < 0) {
+                $errores[] = "El precio de venta no puede ser negativo.";
+            }
+            if ($datosProducto['plusvalia'] < 0) {
+                $errores[] = "La plusvalía no puede ser negativa.";
+            }
+            if ($datosProducto['plusvalia'] > $datosProducto['precioVenta']) {
+                $errores[] = "La plusvalía no puede ser mayor que el precio de venta.";
+            }
+
+            if (!empty($errores)) {
+                header("Location: ProductoController.php?accion=crear&msg=" . urlencode(implode(' ', $errores)) . "&tipo=error");
+                exit();
+            }
             
             $insumosDirectos = [];
             if (!empty($_POST['insumos'])) {

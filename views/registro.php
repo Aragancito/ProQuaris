@@ -16,8 +16,13 @@
 
         <?php if (isset($_GET['error'])): ?>
             <div class="error-message">
-                <?php if ($_GET['error'] == 1) echo "❌ Todos los campos requeridos deben ser llenados"; ?>
-                <?php if ($_GET['error'] == 2) echo "❌ Error al registrar el usuario"; ?>
+                <?php if (!empty($_GET['msg'])): ?>
+                    ❌ <?php echo htmlspecialchars($_GET['msg']); ?>
+                <?php elseif ($_GET['error'] == 1): ?>
+                    ❌ Todos los campos requeridos deben ser llenados
+                <?php elseif ($_GET['error'] == 2): ?>
+                    ❌ Error al registrar el usuario
+                <?php endif; ?>
             </div>
         <?php endif; ?>
 
@@ -34,7 +39,13 @@
                 <input type="email" name="correo" placeholder="Correo electrónico" required>
             </div>
             <div class="grupo-input">
-                <input type="password" name="contraseña" placeholder="Contraseña" required>
+                <input type="password" id="campoContrasena" name="contraseña" placeholder="Contraseña"
+                       required minlength="8"
+                       pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}"
+                       title="Mínimo 8 caracteres, con mayúscula, minúscula y número">
+                <small id="hintContrasena" style="display:block; margin-top:4px; font-size:12px; color:#94A3B8;">
+                    Mínimo 8 caracteres, con mayúscula, minúscula y número.
+                </small>
             </div>
             
             <div class="grupo-input">
@@ -70,6 +81,31 @@
             inputEmpresa.required = false;
             inputEmpresa.placeholder = "Nombre de Empresa / Planta (Opcional)";
             inputEmpresa.style.border = "none";
+        }
+    });
+
+    // Indicador en vivo de fortaleza de contraseña (sin librerías: JS plano).
+    // El servidor vuelve a validar esto igual al enviar; esto es solo para
+    // que el usuario vea el error ANTES de darle a "Registrar", no después.
+    const campoContrasena = document.getElementById('campoContrasena');
+    const hintContrasena = document.getElementById('hintContrasena');
+
+    campoContrasena.addEventListener('input', function () {
+        const valor = campoContrasena.value;
+        const cumple = valor.length >= 8
+            && /[A-Z]/.test(valor)
+            && /[a-z]/.test(valor)
+            && /[0-9]/.test(valor);
+
+        if (valor.length === 0) {
+            hintContrasena.style.color = '#94A3B8';
+            hintContrasena.textContent = 'Mínimo 8 caracteres, con mayúscula, minúscula y número.';
+        } else if (cumple) {
+            hintContrasena.style.color = '#34D399';
+            hintContrasena.textContent = '✓ Contraseña segura.';
+        } else {
+            hintContrasena.style.color = '#F87171';
+            hintContrasena.textContent = '✗ Falta: mínimo 8 caracteres, mayúscula, minúscula y número.';
         }
     });
 </script>

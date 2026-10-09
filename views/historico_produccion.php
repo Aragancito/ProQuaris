@@ -15,6 +15,86 @@ $historicos = $historicos ?? [];
     <link rel="stylesheet" href="/ProQuaris/views/css/estilos-globales.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+    <style>
+        /* ==========================================
+           IMPRESIÓN / EXPORTAR A PDF (window.print)
+           Técnica: se oculta TODO, y solo se hace visible de nuevo
+           la tabla, sacándola del layout con position:absolute para
+           que no herede el sidebar ni el flex del dashboard.
+           ========================================== */
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 1cm;
+            }
+
+            body * {
+                visibility: hidden;
+            }
+
+            #tablaHistorico, #tablaHistorico * {
+                visibility: visible;
+            }
+
+            #tablaHistorico {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100% !important;
+                border-collapse: collapse;
+            }
+
+            /* Fuerza texto negro sobre blanco: los estilos inline de la
+               tabla (colores claros pensados para fondo oscuro) se ven
+               con !important para no depender de tocar cada <td>. */
+            #tablaHistorico, #tablaHistorico * {
+                color: #000 !important;
+                background: #fff !important;
+            }
+
+            #tablaHistorico th, #tablaHistorico td {
+                border: 1px solid #333 !important;
+                padding: 6px 8px !important;
+                font-size: 11px !important;
+            }
+
+            /* Columnas/elementos que no tienen sentido en el papel
+               (botón de descargar, acciones) */
+        }
+
+        /* Botones REALES de exportar (los que genera DataTables Buttons
+           arriba de la tabla). Antes eran poco visibles; ahora quedan
+           claros y coherentes con la paleta del sistema. */
+        .dt-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .dt-button {
+            padding: 10px 18px !important;
+            border-radius: 8px !important;
+            border: none !important;
+            font-weight: bold !important;
+            font-size: 13px !important;
+            cursor: pointer;
+            color: white !important;
+            background: var(--color-principal) !important;
+        }
+
+        .dt-button:hover {
+            background: var(--color-principal-hover) !important;
+        }
+
+        @media print {
+            .no-imprimir, .dataTables_wrapper .dataTables_filter,
+            .dataTables_wrapper .dataTables_length,
+            .dataTables_wrapper .dataTables_paginate,
+            .dataTables_wrapper .dataTables_info {
+                display: none !important;
+            }
+        }
+    </style>
 </head>
 <body>
 <div class="dashboard-container">
@@ -41,7 +121,7 @@ $historicos = $historicos ?? [];
                         <th>Defectuosas</th>
                         <th>Impacto Neto</th>
                         <th>Fecha Cierre</th>
-                        <th style="text-align: center;">Acciones PDF</th>
+
                     </tr>
                 </thead>
                 <tbody>
@@ -69,9 +149,7 @@ $historicos = $historicos ?? [];
                             <td style="color: #F87171;"><?php echo htmlspecialchars($h['unidadesDefectuosas']); ?> uds</td>
                             <td style="font-weight: bold; color: #38BDF8;">$<?php echo number_format($h['impactoFinancieroNeto'], 0, ',', '.'); ?></td>
                             <td><?php echo htmlspecialchars($h['fechaCierre']); ?></td>
-                            <td style="text-align: center;">
-                                <button onclick="window.print();" style="padding: 6px 12px; background: #6366F1; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold;">📥 Descargar PDF</button>
-                            </td>
+
                         </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>

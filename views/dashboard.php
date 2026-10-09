@@ -159,7 +159,7 @@ try {
     <link rel="stylesheet" href="/ProQuaris/views/css/estilos-globales.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <style>
         .dataTables_wrapper .dataTables_length select,
         .dataTables_wrapper .dataTables_filter input {
@@ -387,4 +387,14 @@ $(document).ready(function() {
 });
 </script>
 </body>
+<!-- ========================================== -->
+<!-- BOTPRESS CHATBOT                           -->
+<!-- ========================================== -->
+<script type="module">
+    import Chatbot from "https://cdn.jsdelivr.net/npm/flowise-embed/dist/web.js"
+    Chatbot.init({
+        chatflowid: "50de36ef-a39c-4cfa-a795-e95952c78ebe",
+        apiHost: "https://cloud.flowiseai.com",
+    })
+</script>
 </html>
