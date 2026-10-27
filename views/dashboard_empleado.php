@@ -72,9 +72,15 @@ if ($puedeOperar) {
                 <h1>Panel de Operaciones en Planta</h1>
                 <p>Control de producción, lotes activos e inspecciones de calidad en tiempo real</p>
             </div>
-            <?php if ($puedeOperar): ?>
-                <a href="/ProQuaris/controllers/OrdenController.php?accion=crear" class="btn-primary">+ Nueva Orden</a>
-            <?php endif; ?>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <button type="button" class="btn-ayuda"
+                        data-ayuda-titulo="Panel de Operaciones (Empleado)"
+                        data-ayuda="Este panel muestra SOLO los datos de la planta a la que estás vinculado, no los de otras plantas.\n<b>Órdenes Activas</b>: las órdenes de producción en curso en tu planta.\n<b>Lotes Activos</b>: los lotes que todavía no se han cerrado.\n<b>Alertas de Calidad</b>: cuántos lotes han sido Rechazados.\nA diferencia del Administrador, aquí no ves gráficas ni cifras financieras (ganancias/pérdidas) — esos datos son exclusivos del Administrador de tu planta.\nSi ves un aviso de 'Requiere asignación de planta' o 'Esperando aprobación', todavía no puedes crear órdenes ni inspecciones: primero debes vincularte y ser aprobado desde 'Usuarios y Roles'."
+                        title="Ayuda de este panel">?</button>
+                <?php if ($puedeOperar): ?>
+                    <a href="/ProQuaris/controllers/OrdenController.php?accion=crear" class="btn-primary">+ Nueva Orden</a>
+                <?php endif; ?>
+            </div>
         </div>
 
         <?php if (!$tienePlanta): ?>

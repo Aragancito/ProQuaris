@@ -526,6 +526,41 @@ table.dataTable tbody td {
     margin-bottom: 14px;
 }
 
+/* El modal de ayuda reutiliza .confirm-box, pero en azul (no rojo) porque
+   no es una advertencia, es información. */
+.ayuda-icono {
+    background: rgba(99, 102, 241, 0.15) !important;
+    color: var(--color-principal) !important;
+}
+
+.ayuda-box {
+    max-width: 420px !important;
+}
+
+/* Botón circular "?" — se usa tanto en el sidebar como en la esquina
+   superior derecha de cada módulo. */
+.btn-ayuda {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid var(--color-borde-claro);
+    background: var(--color-sidebar);
+    color: var(--color-texto-mutado);
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.btn-ayuda:hover {
+    background: var(--color-principal);
+    color: white;
+    transform: scale(1.08);
+}
+
 .confirm-mensaje {
     color: var(--color-texto);
     font-size: 15px;

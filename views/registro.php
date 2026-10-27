@@ -30,10 +30,14 @@
             <input type="hidden" name="accion" value="registrar">
 
             <div class="grupo-input">
-                <input type="text" name="nombre" placeholder="Nombres" required>
+                <input type="text" name="nombre" placeholder="Nombres" required
+                       pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+"
+                       title="Solo letras, sin números ni símbolos">
             </div>
             <div class="grupo-input">
-                <input type="text" name="apellido" placeholder="Apellidos" required>
+                <input type="text" name="apellido" placeholder="Apellidos" required
+                       pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+"
+                       title="Solo letras, sin números ni símbolos">
             </div>
             <div class="grupo-input">
                 <input type="email" name="correo" placeholder="Correo electrónico" required>

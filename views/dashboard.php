@@ -200,7 +200,13 @@ try {
                 <h1>Panel de Control Principal</h1>
                 <p>Inteligencia de negocios y analítica de planta en tiempo real</p>
             </div>
-            <a href="/ProQuaris/controllers/OrdenController.php?accion=crear" class="btn-primary">+ Nueva Orden</a>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <button type="button" class="btn-ayuda"
+                        data-ayuda-titulo="Panel de Control (Administrador)"
+                        data-ayuda="Este panel es exclusivo del Administrador y muestra SOLO los datos de tu planta.\n<b>Órdenes Activas / Lotes Activos</b>: lo que está en proceso ahora mismo.\n<b>Alertas Calidad</b>: cuántos lotes han sido Rechazados.\n<b>Ganancias / Pérdidas (Mes)</b>: resultado financiero neto del mes en curso, calculado a partir del histórico de producción.\n<b>Tasa de Defectos</b>: porcentaje de unidades defectuosas sobre el total planificado del mes.\n<b>Gráficas</b>: aprobación de lotes, unidades correctas por mes, evolución de ganancias y rentabilidad por producto.\nSi otro Administrador usa ProQuaris, sus números nunca se mezclan con los tuyos."
+                        title="Ayuda de este panel">?</button>
+                <a href="/ProQuaris/controllers/OrdenController.php?accion=crear" class="btn-primary">+ Nueva Orden</a>
+            </div>
         </div>
 
         <div class="kpi-grid" style="grid-template-columns: repeat(5, 1fr);">
@@ -387,14 +393,4 @@ $(document).ready(function() {
 });
 </script>
 </body>
-<!-- ========================================== -->
-<!-- BOTPRESS CHATBOT                           -->
-<!-- ========================================== -->
-<script type="module">
-    import Chatbot from "https://cdn.jsdelivr.net/npm/flowise-embed/dist/web.js"
-    Chatbot.init({
-        chatflowid: "50de36ef-a39c-4cfa-a795-e95952c78ebe",
-        apiHost: "https://cloud.flowiseai.com",
-    })
-</script>
 </html>

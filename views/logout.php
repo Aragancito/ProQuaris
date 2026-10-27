@@ -27,7 +27,10 @@ if (ini_get("session.use_cookies")) {
 // 3. Destruir la sesión en el servidor
 session_destroy();
 
-// 4. Redirigir inmediatamente al formulario de login
-header("Location: login.php");
+// 4. Redirigir inmediatamente al index (landing page), no al login directo.
+// logout.php vive en /views/, así que hay que subir un nivel para llegar
+// a index.php, que está en la raíz del proyecto. Aplica igual para
+// Administrador y Empleado: no hay distinción de rol en este archivo.
+header("Location: ../index.php");
 exit();
 ?>

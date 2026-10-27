@@ -17,6 +17,7 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         crearModalConfirmacion();
+        crearModalAyuda();
         crearContenedorToasts();
         mostrarToastDesdeURL();
 
@@ -99,6 +100,45 @@
             e.preventDefault();
             elementoPendiente = disparador;
             document.getElementById('confirmMensajeTexto').textContent = disparador.getAttribute('data-confirm');
+            overlay.classList.add('activo');
+        });
+    }
+
+    // --- Modal de ayuda contextual: el ícono "?" (sidebar o esquina superior
+    // derecha) abre esto. Cualquier elemento con data-ayuda="texto" y, opcional,
+    // data-ayuda-titulo="Título" funciona automáticamente, sin JS adicional.
+    function crearModalAyuda() {
+        if (document.querySelector('.ayuda-overlay')) return;
+
+        const overlay = document.createElement('div');
+        overlay.className = 'confirm-overlay ayuda-overlay';
+        overlay.innerHTML =
+            '<div class="confirm-box ayuda-box">' +
+                '<div class="confirm-icono ayuda-icono">❓</div>' +
+                '<div class="ayuda-titulo" id="ayudaTitulo" style="font-weight:700; font-size:16px; color:#F8FAFC; margin-bottom:8px;"></div>' +
+                '<div class="confirm-mensaje" id="ayudaMensajeTexto" style="text-align:left;"></div>' +
+                '<div class="confirm-botones">' +
+                    '<button type="button" class="btn-cancel" id="ayudaBtnCerrar">Entendido</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(overlay);
+
+        function cerrarAyuda() { overlay.classList.remove('activo'); }
+
+        overlay.addEventListener('click', function (e) { if (e.target === overlay) cerrarAyuda(); });
+        document.getElementById('ayudaBtnCerrar').addEventListener('click', cerrarAyuda);
+
+        document.addEventListener('click', function (e) {
+            const disparador = e.target.closest('[data-ayuda]');
+            if (!disparador) return;
+
+            e.preventDefault();
+            document.getElementById('ayudaTitulo').textContent = disparador.getAttribute('data-ayuda-titulo') || '¿Qué hago aquí?';
+            // Permite texto con saltos de línea simples usando \n en el atributo.
+            document.getElementById('ayudaMensajeTexto').innerHTML =
+                disparador.getAttribute('data-ayuda').split('\n').map(function (linea) {
+                    return '<p style="margin-bottom:8px;">' + linea + '</p>';
+                }).join('');
             overlay.classList.add('activo');
         });
     }

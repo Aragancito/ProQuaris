@@ -129,8 +129,24 @@ class UsuarioController {
         // dominio real con servidor de correo, así que checkdnsrr lo rechaza.
         $errores = [];
 
-        if (empty($_POST['nombre'])) $errores[] = "El nombre es obligatorio.";
-        if (empty($_POST['apellido'])) $errores[] = "El apellido es obligatorio.";
+        $nombreTrim = trim($_POST['nombre'] ?? '');
+        $apellidoTrim = trim($_POST['apellido'] ?? '');
+        // Solo letras (incluye tildes y ñ) y espacios para nombres compuestos.
+        // Esto es lo que te faltaba: "123" / "456" pasaban porque antes solo
+        // se revisaba que el campo no viniera vacío, no que tuviera forma de nombre.
+        $patronNombre = '/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/u';
+
+        if (empty($nombreTrim)) {
+            $errores[] = "El nombre es obligatorio.";
+        } elseif (!preg_match($patronNombre, $nombreTrim)) {
+            $errores[] = "El nombre solo puede contener letras.";
+        }
+
+        if (empty($apellidoTrim)) {
+            $errores[] = "El apellido es obligatorio.";
+        } elseif (!preg_match($patronNombre, $apellidoTrim)) {
+            $errores[] = "El apellido solo puede contener letras.";
+        }
 
         if (empty($correo) || !filter_var($correo, FILTER_VALIDATE_EMAIL)) {
             $errores[] = "El correo no tiene un formato válido.";
@@ -162,8 +178,8 @@ class UsuarioController {
         }
 
         $datos = array(
-            'nombre' => $_POST['nombre'] ?? '',
-            'apellido' => $_POST['apellido'] ?? '',
+            'nombre' => $nombreTrim,
+            'apellido' => $apellidoTrim,
             'correo' => $correo,
             'contraseña' => $contrasenaNueva,
             'rol' => $rol,
